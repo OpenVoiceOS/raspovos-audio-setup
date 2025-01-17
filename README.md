@@ -29,7 +29,7 @@ The setup ensures that conflicting services are disabled, as the `autoconfigure_
    Manages PulseAudio/PipeWire sinks, specifically for combining audio sinks when multiple devices are detected. 
 
 7. **usb-autovolume**  
-   Adjusts the volume of USB soundcards automatically when they are connected, ensuring the correct volume is set for each device. 
+   Adjusts the volume of USB soundcards and recreates the combined audio sink to include the new USB soundcard
 
 ---
 
