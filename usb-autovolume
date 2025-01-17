@@ -1,11 +1,6 @@
 #!/bin/bash
 # Configuration
 readonly DEFAULT_VOLUME=85                   # Default volume to set for USB soundcard
-readonly STABILIZATION_DELAY=5              # Delay (in seconds) to wait for sinks to stabilize
-
-# Set the necessary environment variables for PipeWire (or PulseAudio)
-export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
-export XDG_RUNTIME_DIR="/run/user/1000/"
 
 # Enable strict error handling
 set -euo pipefail
@@ -23,48 +18,36 @@ error_handler() {
 trap 'error_handler ${LINENO} $?' ERR
 
 # Log function to write messages to a log file
-# This appends messages with a timestamp to /tmp/autosink-usb.log
+# This appends messages with a timestamp to /tmp/autovolume-usb.log
 log_message() {
     echo "$1"
-    echo "$(date) - $1" >> /tmp/autosink-usb.log
+    echo "$(date) - $1" >> /tmp/autovolume-usb.log
 }
 
-# Read udev arguments
-ACTION=${ACTION:-"unknown"}  # Action type (e.g., 'add' or 'remove')
-ID_MODEL=${ID_MODEL:-"unknown"}  # Model identifier of the connected device
+# Sleep for a brief moment to ensure the device is fully initialized
+sleep 1
 
-# Log the udev event with action and model details
-log_message "Udev event: ACTION=$ACTION, ID_MODEL=$ID_MODEL"
+log_message "$(aplay -l)"  # Log the detected soundcards
 
-# Check if 'pactl' command is available, which is necessary for controlling audio sinks
-if ! command -v pactl &>/dev/null; then
-    log_message "pactl not found. Ensure pulseaudio-utils is installed."
-    exit 1
-fi
+# Check for USB soundcard
+USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+if [ -n "$USB_CARD" ]; then
+    # Output the soundcard index for debugging
+    log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
-# Check if this is an 'add' action for a USB sound card
-if [[ "$ACTION" == "add" ]]; then
-    log_message "USB sound card connected: $ID_MODEL"
+    # Detect the control name for the USB soundcard, like 'Master', 'Speaker', etc.
+    CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker' | head -n 1 | cut -d"'" -f2)
 
-    # Wait for the audio sinks to stabilize
-    sleep "${STABILIZATION_DELAY}"
-
-    # Get the sink name corresponding to the USB soundcard using pactl
-    USB_SINK=$(pactl list short sinks | grep -i "$ID_MODEL" | awk '{print $2}')
-
-    # If the USB sink is found, adjust its volume
-    if [[ -n "$USB_SINK" ]]; then
-        # Set the volume for the USB sink to the default level
-        if pactl set-sink-volume "$USB_SINK" "${DEFAULT_VOLUME}%"; then
-            log_message "Set volume for USB sink: $USB_SINK to ${DEFAULT_VOLUME}%"
-        else
-            log_message "Failed to set volume for USB sink: $USB_SINK" "ERROR"
-        fi
-    else
-        log_message "No sink found for USB card: $ID_MODEL"
+    # If no known control found, log an error
+    if [ -z "$CONTROL_NAME" ]; then
+        log_message "No valid control name found for USB soundcard (card $USB_CARD)"
+        exit 1
     fi
-fi
 
-# Recreate the merged audio sink
-log_message "Creating merged audio sinks..."
-sudo systemctl enable --now update-audio-sinks.service
+    # Adjust the volume of the detected soundcard to 85% using amixer
+    amixer -c "$USB_CARD" sset "$CONTROL_NAME" "$DEFAULT_VOLUME%"
+
+    log_message "Volume set to $DEFAULT_VOLUME% on card $USB_CARD, control '$CONTROL_NAME'"
+else
+    log_message "No USB audio device detected."
+fi

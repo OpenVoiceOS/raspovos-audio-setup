@@ -7,12 +7,18 @@
 # Usage: /usr/libexec/update-audio-sinks
 
 # Set the necessary environment variables for PipeWire (or PulseAudio)
-# needed if running as root
 export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
 export XDG_RUNTIME_DIR="/run/user/1000/"
 
 # Set error handling
 set -euo pipefail
+
+
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
+HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
+HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
+
 
 # Function to handle errors
 error_handler() {
@@ -32,13 +38,14 @@ log_message() {
     echo "$(date) - $1" >> /tmp/autosink.log
 }
 
-# Ensure pactl is available
-if ! command -v pactl &>/dev/null; then
-    log_message "pactl not found. Ensure pulseaudio-utils is installed."
-    exit 1
-fi
 
 log_message "Setting up audio output as combined sinks"
+
+if [ "$EUID" -eq 0 ]; then
+    log_message "Running as root"
+else
+    log_message "Running as user"
+fi
 
 # Wait for the 'auto_null' sink if present (system booting phase)
 if pactl list short sinks | grep -q "auto_null"; then
@@ -46,8 +53,29 @@ if pactl list short sinks | grep -q "auto_null"; then
     sleep 3
 fi
 
+# Check if the file exists before reading it
+if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
+    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+    log_message "ovos-i2csound detection: $i2c_platform"
+else
+    log_message "/etc/OpenVoiceOS/i2c_platform not found."
+    i2c_platform=""
+fi
+
+# log mk1 related warnings just for info and debug
+if echo "$i2c_platform" | grep -q "MARK1"; then
+    # If it's a Mark 1 device, configure the Mark 1 soundcard
+    # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
+    if aplay -l | grep "$MK1_CARD_NAME"; then
+        CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
+        log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
+    else
+        log_message "Error: ovos-i2csound detected Mark1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
+    fi
+fi
+
 # Log the current sinks before any action
-log_message "Sinks before action:\n $(pactl list short sinks)"
+log_message "Sinks before action: $(pactl list short sinks)"
 
 # Get all sinks, excluding 'auto_combined' and 'auto_null'
 # NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
@@ -97,4 +125,4 @@ else
 fi
 
 # Log the current sinks after action
-log_message "Sinks after action:\n $(pactl list short sinks)"
+log_message "Sinks after action: $(pactl list short sinks)"

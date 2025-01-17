@@ -16,22 +16,23 @@
 I2C_DEVICE_FILE="/etc/OpenVoiceOS/i2c_platform"
 UDEV_SOUNDCARD_RULE_FILE="/etc/udev/rules.d/99-autoconfigure-sound.rules"
 UDEV_USB_AUTO_VOLUME_RULE_FILE="/etc/udev/rules.d/99-usb-autovolume.rules"
+UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 
 # UDEV rule for auto-configuring soundcard when a USB soundcard is added/removed
 # It will trigger the soundcard autoconfigure systemd service instead of running a script directly
-UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/systemctl start soundcard-autoconfigure.service"'
+UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/soundcard_autoconfigure"'
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
-# This triggers the service for user 1000
 # - set default sink volume for that card
 # - recreate combined sinks for output
-# NOTE: script must not run as root, otherwise it will mess up permissions for pactl
-# TODO - how to pass env vars to the script?
-UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/systemctl start usb-autovolume.service"'
+UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/update-audio-sinks"'
+UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/usb-autovolume"'
 
 # Service names
 COMBINED_SINKS_SERVICE="combine_sinks.service"
 AUTOCONFIGURE_SERVICE="autoconfigure_soundcard.service"
+
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
 
 # Function to disable conflicting services
 # Disables a service if it is active.
@@ -39,6 +40,7 @@ disable_service() {
     local service_name=$1
     if systemctl is-active --quiet "$service_name"; then
         echo "Disabling $service_name..."
+        sudo systemctl stop "$service_name"
         sudo systemctl disable --now "$service_name"
         if [ $? -eq 0 ]; then
             echo "$service_name disabled successfully."
@@ -55,7 +57,8 @@ usage() {
     echo "  1 - Set default soundcard"
     echo "  2 - Autoconfigure default soundcard"
     echo "  3 - Enable combined audio sinks"
-    echo "  4 - Exit"
+    echo "  4 - Revert changes"
+    echo "  5 - Exit"
     exit 1
 }
 
@@ -64,10 +67,11 @@ if [ $# -gt 0 ]; then
     choice=$1
 else
     echo "Audio Setup Options:"
-    echo "1) Set default soundcard"
+    echo "1) Manually select default soundcard"
     echo "2) Autoconfigure default soundcard"
     echo "3) Enable combined audio sinks"
-    echo "4) Exit"
+    echo "4) Revert changes"
+    echo "5) Exit"
     read -p "Choose an option: " choice
 fi
 
@@ -81,18 +85,22 @@ case $choice in
     aplay -l
     read -p "Enter the card number to set as default: " user_card
     echo "Setting ALSA default card to: $user_card"
-    echo "defaults.pcm.card $user_card" | sudo tee /etc/asound.conf > /dev/null
-    echo "defaults.ctl.card $user_card" | sudo tee -a /etc/asound.conf > /dev/null
+
+    echo "defaults.pcm.card $user_card" > "/home/$OVOS_USER/.asoundrc"
+    echo "defaults.ctl.card $user_card" >> "/home/$OVOS_USER/.asoundrc"
 
     # Disable autoconfigure udev rule
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
-        echo "Disabling autoconfigure rule."
+        echo "Disabling autoconfigure rule. $UDEV_SOUNDCARD_RULE_FILE"
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
     fi
 
-    # Disable USB autoconfigure udev rule
+    if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
+      echo "Disabling USB merge sinks rule. $UDEV_USB_MERGE_SINKS_FILE"
+      sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
+    fi
     if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
-      echo "Disabling USB autovolume rule."
+      echo "Disabling USB auto volume rule. $UDEV_USB_AUTO_VOLUME_RULE"
       sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
     fi
 
@@ -104,6 +112,13 @@ case $choice in
 2)
     # Choice 2: Autoconfigure default soundcard
     disable_service "$COMBINED_SINKS_SERVICE"
+
+    # Check if the .asoundrc file exists, then remove it
+    if [ -f "/home/$OVOS_USER/.asoundrc" ]; then
+        rm "/home/$OVOS_USER/.asoundrc"
+        echo "Removed old ~/.asoundrc"
+    fi
+
     echo "Enabling $AUTOCONFIGURE_SERVICE..."
     sudo systemctl enable --now "$AUTOCONFIGURE_SERVICE"
     if [ $? -eq 0 ]; then
@@ -117,15 +132,21 @@ case $choice in
         echo "Creating udev rule for autoconfiguration of USB soundcards."
         echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
         echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
+        echo "$UDEV_SOUNDCARD_RULE"
     else
         echo "Udev rule already exists."
     fi
 
     # Disable USB autoconfigure udev rule
-    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
-      echo "Disabling USB autovolume rule."
-      sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
+      echo "Disabling USB merge sinks rule. $UDEV_USB_MERGE_SINKS_FILE"
+      sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
     fi
+
+    echo "Creating udev rule for USB autovolume."
+    echo "$UDEV_USB_AUTO_VOLUME_RULE" | sudo tee "$UDEV_USB_AUTO_VOLUME_RULE_FILE" > /dev/null
+    echo "Udev rule for USB autovolume created: $UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    echo "$UDEV_USB_AUTO_VOLUME_RULE"
 
     # Reload udev rules to apply the new rule immediately
     echo "Reloading udev rules to apply changes..."
@@ -134,6 +155,13 @@ case $choice in
 3)
     # Choice 3: Enable combined audio sinks
     disable_service "$AUTOCONFIGURE_SERVICE"
+
+    # Check if the .asoundrc file exists, then remove it
+    if [ -f "/home/$OVOS_USER/.asoundrc" ]; then
+        rm "/home/$OVOS_USER/.asoundrc"
+        echo "Removed old ~/.asoundrc"
+    fi
+
     echo "Enabling $COMBINED_SINKS_SERVICE..."
     sudo systemctl enable --now "$COMBINED_SINKS_SERVICE"
     if [ $? -eq 0 ]; then
@@ -144,20 +172,59 @@ case $choice in
 
     # Disable autoconfigure udev rule
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
-        echo "Disabling soundcard rule."
+        echo "Disabling soundcard rule. $UDEV_SOUNDCARD_RULE_FILE"
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
     fi
 
     # Enable USB autoconfigure udev rule
+    echo "Creating udev rule for USB merge sinks."
+    echo "$UDEV_USB_MERGE_SINKS_RULE" | sudo tee "$UDEV_USB_MERGE_SINKS_FILE" > /dev/null
+    echo "Udev rule for USB merge sinks created: $UDEV_USB_MERGE_SINKS_FILE"
+    echo "$UDEV_USB_MERGE_SINKS_RULE"
+
     echo "Creating udev rule for USB autovolume."
     echo "$UDEV_USB_AUTO_VOLUME_RULE" | sudo tee "$UDEV_USB_AUTO_VOLUME_RULE_FILE" > /dev/null
     echo "Udev rule for USB autovolume created: $UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    echo "$UDEV_USB_AUTO_VOLUME_RULE"
 
     # Reload udev rules after removing the rule
     echo "Reloading udev rules to apply changes..."
     sudo udevadm control --reload
     ;;
 4)
+    # Choice 4: Reset everything (clean state)
+    echo "Resetting audio configuration..."
+
+    # Stop and disable all related services
+    disable_service "$COMBINED_SINKS_SERVICE"
+    disable_service "$AUTOCONFIGURE_SERVICE"
+
+    # Remove old .asoundrc and related files
+    if [ -f "/home/$OVOS_USER/.asoundrc" ]; then
+        rm "/home/$OVOS_USER/.asoundrc"
+        echo "Removed old ~/.asoundrc"
+    fi
+
+    # Remove udev rules related to soundcard configuration
+    if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
+        sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
+        echo "Removed udev soundcard rule"
+    fi
+    if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
+        sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
+        echo "Removed udev USB merge sinks rule"
+    fi
+    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
+        sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+        echo "Removed udev USB auto volume rule"
+    fi
+
+    # Reload udev rules after cleanup
+    echo "Reloading udev rules to apply changes..."
+    sudo udevadm control --reload
+    ;;
+
+5)
     # Exit
     echo "Exiting audio setup."
     ;;
@@ -167,3 +234,4 @@ case $choice in
     usage
     ;;
 esac
+

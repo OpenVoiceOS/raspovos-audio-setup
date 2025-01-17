@@ -8,6 +8,7 @@ MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
 HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
 
+
 # Set error handling
 set -euo pipefail
 
@@ -32,14 +33,24 @@ log_message() {
 # Function to set ALSA defaults for a given card number
 # Arguments:
 #   $1 - The card number to set as default
-# This function updates /etc/asound.conf with the provided card number for ALSA.
+# This function updates /etc/asound.conf or ~/.asoundrc with the provided card number for ALSA.
 set_alsa_defaults() {
     local card_number=$1
     log_message "Configuring ALSA default card"
-    # Set the default PCM card
-    echo "defaults.pcm.card $card_number" | sudo tee /etc/asound.conf > /dev/null
-    # Set the default control card
-    echo "defaults.ctl.card $card_number" | sudo tee -a /etc/asound.conf > /dev/null
+
+    # Determine the ALSA configuration file based on user permissions
+    if [ "$EUID" -eq 0 ]; then
+        # If running as root, modify /etc/asound.conf
+        log_message "Running as root, modifying /etc/asound.conf"
+        echo "defaults.pcm.card $card_number" | sudo tee /etc/asound.conf > /dev/null
+        echo "defaults.ctl.card $card_number" | sudo tee -a /etc/asound.conf > /dev/null
+    else
+        # If running as a user, modify ~/.asoundrc
+        log_message "Running as user, modifying ~/.asoundrc"
+        echo "defaults.pcm.card $card_number" > ~/.asoundrc
+        echo "defaults.ctl.card $card_number" >> ~/.asoundrc
+    fi
+
     log_message "ALSA default card set to: $card_number"
 }
 
@@ -50,23 +61,24 @@ sleep 1  # Wait for ovos-i2csound service to finish
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
     i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
 else
-    log_message "/etc/OpenVoiceOS/i2c_platform not found, skipping Mark 1 detection."
+    log_message "/etc/OpenVoiceOS/i2c_platform not found."
     i2c_platform=""
 fi
+
+log_message "$(aplay -l)"  # Log the detected soundcards
 
 # Autoconfigure default soundcard based on platform
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
-    log_message "Mark 1 soundcard detected."
+    log_message "Mark 1 soundcard detected by ovos-i2csound."
     # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
-    CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
-    log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
-
-    if [ -n "$CARD_NUMBER" ]; then
+    if aplay -l | grep "$MK1_CARD_NAME"; then
+        CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
+        log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
         # Set ALSA defaults for the detected Mark 1 soundcard
         set_alsa_defaults "$CARD_NUMBER"
     else
-        log_message "Error: Could not detect Mark 1 soundcard."
+        log_message "Error: ovos-i2csound detected Mark1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
         exit 1
     fi
 else
@@ -106,4 +118,3 @@ else
     fi
 fi
 
-log_message "$(aplay -l)"  # Log the detected soundcards
