@@ -8,13 +8,6 @@ MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
 HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
 
-# Check if running as root (EUID == 0)
-if [ "$EUID" -ne 0 ]; then
-    SUDO_CMD="sudo"
-else
-    SUDO_CMD=""
-fi
-
 
 # Set error handling
 set -euo pipefail
@@ -37,7 +30,6 @@ log_message() {
     echo "$(date) - $1" >> /tmp/autosoundcard.log
 }
 
-
 # Function to set ALSA defaults for a given card number
 # Arguments:
 #   $1 - The card number to set as default
@@ -48,14 +40,22 @@ set_alsa_defaults() {
     # TODO - from system service it crashes here without logs, we never get the next one
     #  from cli works fine ???
     # Set the default PCM card
-    echo "defaults.pcm.card $card_number" | $SUDO_CMD tee /etc/asound.conf > /dev/null
+    sudo echo "defaults.pcm.card $card_number" > /etc/asound.conf
     # Set the default control card
-    echo "defaults.ctl.card $card_number" | $SUDO_CMD tee -a /etc/asound.conf > /dev/null
+    sudo echo "defaults.ctl.card $card_number" >> /etc/asound.conf
     log_message "ALSA default card set to: $card_number"
 }
 
 # Allow ovos-i2csound to finish its setup (check if service exists before sleeping)
 sleep 1  # Wait for ovos-i2csound service to finish
+
+# Check if running as root (EUID == 0)
+if [ "$EUID" -ne 0 ]; then
+    log_message "Running as user"
+else
+    log_message "Running as root"
+fi
+
 
 # Check if the file exists before reading it
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
