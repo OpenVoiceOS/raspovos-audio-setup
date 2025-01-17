@@ -78,7 +78,30 @@ You can configure audio using the provided script, `ovos-audio-setup`. It allows
   - **/tmp/autosink-usb.log** (for USB soundcard udev events)
   - **/tmp/autosink.log** (for sink creation and merging events)
 
-Check these logs for troubleshooting or status updates.  
+Check these logs for troubleshooting if you have no audio output.  
+
+examples logs you can expect
+```
+(ovos) ovos@raspOVOS:~ $ cat /tmp/autosink.log 
+Fri 17 Jan 06:46:27 WET 2025 - Setting up audio output as combined sinks
+Fri 17 Jan 06:46:28 WET 2025 - auto_null sink exists, still booting? Sleeping for 3 seconds...
+Fri 17 Jan 06:46:31 WET 2025 - Sinks before action:\n 53	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+54	alsa_output.platform-3f902000.hdmi.hdmi-stereo	PipeWire	s32le 2ch 48000Hz	SUSPENDED
+55	alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+57	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	RUNNING
+Fri 17 Jan 06:46:32 WET 2025 - auto_combined sink missing
+Fri 17 Jan 06:46:32 WET 2025 - Total sinks: 4
+Fri 17 Jan 06:46:32 WET 2025 - Combined sink created with outputs: alsa_output.platform-bcm2835_audio.stereo-fallback,alsa_output.platform-3f902000.hdmi.hdmi-stereo,alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo,alsa_output.platform-soc_sound.stereo-fallback (module ID: 536870916)
+Fri 17 Jan 06:46:33 WET 2025 - Sinks after action:\n 53	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+54	alsa_output.platform-3f902000.hdmi.hdmi-stereo	PipeWire	s32le 2ch 48000Hz	SUSPENDED
+55	alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+57	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	IDLE
+91	auto_combined	PipeWire	float32le 2ch 48000Hz	RUNNING
+
+(ovos) ovos@raspOVOS:~ $ cat /tmp/autosoundcard.log 
+Fri 17 Jan 06:46:32 WET 2025 - Mark 1 soundcard detected.
+Fri 17 Jan 06:46:33 WET 2025 - ALSA default card set to: 3
+```
 
 ---
 

@@ -21,7 +21,6 @@ error_handler() {
 
 trap 'error_handler ${LINENO} $?' ERR
 
-
 # Log function to write to a log file
 # Args:
 #   $1: Message to log
@@ -44,13 +43,19 @@ set_alsa_defaults() {
     log_message "ALSA default card set to: $card_number"
 }
 
-# Read the I2C device configuration to check if it's a Mark 1 device
-i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+# Check if the file exists before reading it
+if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
+    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+else
+    log_message "/etc/OpenVoiceOS/i2c_platform not found, skipping Mark 1 detection."
+    i2c_platform=""
+fi
 
 # Autoconfigure default soundcard based on platform
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
     log_message "Mark 1 soundcard detected."
+    # NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
     CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
 
     if [ -n "$CARD_NUMBER" ]; then
@@ -96,3 +101,6 @@ else
         fi
     fi
 fi
+
+log_message "$(aplay - l)"
+
