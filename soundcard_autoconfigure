@@ -35,16 +35,16 @@ log_message() {
 # This function updates /etc/asound.conf with the provided card number for ALSA.
 set_alsa_defaults() {
     local card_number=$1
+    log_message "Configuring ALSA default card"
     # Set the default PCM card
     echo "defaults.pcm.card $card_number" | sudo tee /etc/asound.conf > /dev/null
     # Set the default control card
     echo "defaults.ctl.card $card_number" | sudo tee -a /etc/asound.conf > /dev/null
-    sudo alsactl restore
     log_message "ALSA default card set to: $card_number"
 }
 
 # Allow ovos-i2csound to finish its setup (check if service exists before sleeping)
-sleep 5  # Wait for ovos-i2csound service to finish
+sleep 1  # Wait for ovos-i2csound service to finish
 
 # Check if the file exists before reading it
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
@@ -60,6 +60,7 @@ if echo "$i2c_platform" | grep -q "MARK1"; then
     log_message "Mark 1 soundcard detected."
     # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
     CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
+    log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
 
     if [ -n "$CARD_NUMBER" ]; then
         # Set ALSA defaults for the detected Mark 1 soundcard

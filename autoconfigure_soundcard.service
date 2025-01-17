@@ -9,7 +9,7 @@ User=1000
 ExecStart=/usr/libexec/soundcard_autoconfigure
 RemainAfterExit=yes
 Restart=on-failure
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy=default.target
