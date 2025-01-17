@@ -27,19 +27,19 @@ log_message() {
 # Sleep for a brief moment to ensure the device is fully initialized
 sleep 1
 
-# List sound devices and filter out USB audio devices
-aplay -l | grep -i "usb" | while read -r line; do
-    # Extract the soundcard index (e.g., "card 1")
-    card_index=$(echo "$line" | grep -oP 'card \K\d+')
+log_message "$(aplay -l)"  # Log the detected soundcards
 
-    # Output the soundcard index for debugging
-    log_message "USB audio device detected. Soundcard index: $card_index"
+# Check for USB soundcard
+USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+if [ -n "$USB_CARD" ]; then
+  # Output the soundcard index for debugging
+  log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
-    # Adjust the volume of the detected soundcard to 85% using amixer
-    amixer -c "$card_index" sset 'Master' 85%
+  # Adjust the volume of the detected soundcard to 85% using amixer
+  amixer -c "$USB_CARD" sset 'Master' 85%
 
-    # You can also specify 'PCM' or another control if 'Master' doesn't exist for your device:
-    # amixer -c "$card_index" sset 'PCM' 85%
+  # You can also specify 'PCM' or another control if 'Master' doesn't exist for your device:
+  # amixer -c "$USB_CARD" sset 'PCM' 85%
 
-    log_message "Volume set to 85% on card $card_index"
-done
+  log_message "Volume set to 85% on card $USB_CARD"
+fi
