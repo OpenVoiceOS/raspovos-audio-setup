@@ -39,6 +39,10 @@ sudo chmod +x "/usr/libexec/update-audio-sinks"
 sudo chmod +x "/usr/libexec/soundcard_autoconfigure"
 sudo chmod +x "/usr/libexec/usb-autovolume"
 
+# Install dependencies
+apt-get update
+apt-get install -y --no-install-recommends pulseaudio-utils
+
 # Check if i2csound.service exists
 if [ ! -f /etc/systemd/system/i2csound.service ]; then
     echo "/etc/systemd/system/i2csound.service is missing. Automatic audio drivers setup is not available"
@@ -50,8 +54,7 @@ if [ ! -f /etc/systemd/system/i2csound.service ]; then
             echo "Installing ovos-i2csound..."
 
             # Install dependencies
-            apt-get update
-            apt-get install -y --no-install-recommends i2c-tools pulseaudio-utils
+            apt-get install -y --no-install-recommends i2c-tools
 
             # Clone and copy files
             git clone https://github.com/OpenVoiceOS/ovos-i2csound /tmp/ovos-i2csound
