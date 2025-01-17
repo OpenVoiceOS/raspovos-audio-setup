@@ -85,13 +85,17 @@ case $choice in
 
     # Disable autoconfigure udev rule
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
-        echo "Disabling autoconfigure rule."
+        echo "Disabling autoconfigure rule. $UDEV_SOUNDCARD_RULE_FILE"
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
     fi
 
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
-      echo "Disabling USB merge sinks rule."
+      echo "Disabling USB merge sinks rule. $UDEV_USB_MERGE_SINKS_FILE"
       sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
+    fi
+    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
+      echo "Disabling USB auto volume rule. $UDEV_USB_AUTO_VOLUME_RULE"
+      sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
     fi
 
     # Reload udev rules after removing the rule
@@ -122,7 +126,7 @@ case $choice in
 
     # Disable USB autoconfigure udev rule
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
-      echo "Disabling USB merge sinks rule."
+      echo "Disabling USB merge sinks rule. $UDEV_USB_MERGE_SINKS_FILE"
       sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
     fi
 
@@ -148,7 +152,7 @@ case $choice in
 
     # Disable autoconfigure udev rule
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
-        echo "Disabling soundcard rule."
+        echo "Disabling soundcard rule. $UDEV_SOUNDCARD_RULE_FILE"
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
     fi
 
