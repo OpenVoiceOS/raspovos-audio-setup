@@ -7,6 +7,9 @@ set -euo pipefail
 
 # Function to handle errors
 # Logs an error message with the line number and error code, then exits
+# Arguments:
+#   $1 - Line number where the error occurred
+#   $2 - Error code returned by the command
 error_handler() {
     local line_no=$1
     local error_code=$2
@@ -19,6 +22,8 @@ trap 'error_handler ${LINENO} $?' ERR
 
 # Log function to write messages to a log file
 # This appends messages with a timestamp to /tmp/autovolume-usb.log
+# Arguments:
+#   $1 - Message to log
 log_message() {
     echo "$1"
     echo "$(date) - $1" >> /tmp/autovolume-usb.log
@@ -27,22 +32,43 @@ log_message() {
 # Sleep for a brief moment to ensure the device is fully initialized
 sleep 1
 
-log_message "$(aplay -l)"  # Log the detected soundcards
+# Log the detected soundcards
+log_message "$(aplay -l)"
 
 # Check for USB soundcard
-USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
-if [ -n "$USB_CARD" ]; then
+# NOTE: If there are multiple USB cards detected, we assume the last entry is the intended one
+# This resolves ambiguity if multiple USB soundcards are detected
+# TODO - pass env vars from udev so this isnt ambiguous, keep this method as fallback
+USB_CARDS=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1)
+if [ -n "$USB_CARDS" ]; then
+    # If multiple USB soundcards are detected, log a warning and pick the last one
+    CARD_COUNT=$(echo "$USB_CARDS" | wc -l)
+    if [ "$CARD_COUNT" -gt 1 ]; then
+        log_message "Warning: Multiple USB soundcards detected. Using the last detected card."
+    fi
+
+    # Select the last USB soundcard detected
+    USB_CARD=$(echo "$USB_CARDS" | tail -n 1)
+
     # Output the soundcard index for debugging
     log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
+    # Validate USB_CARD is numeric
+    if ! [[ "$USB_CARD" =~ ^[0-9]+$ ]]; then
+        log_message "Error: Invalid soundcard number: $USB_CARD"
+        exit 1
+    fi
+
     # Detect the control name for the USB soundcard, like 'Master', 'Speaker', etc.
-    CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker' | head -n 1 | cut -d"'" -f2)
+    CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker\|Headphone\|Front\|Output\|PCM' | head -n 1 | cut -d"'" -f2)
 
     # If no known control found, log an error
     if [ -z "$CONTROL_NAME" ]; then
         log_message "No valid control name found for USB soundcard (card $USB_CARD)"
         exit 1
     fi
+
+    log_message "Mixer name: $CONTROL_NAME"
 
     # Adjust the volume of the detected soundcard to 85% using amixer
     amixer -c "$USB_CARD" sset "$CONTROL_NAME" "$DEFAULT_VOLUME%"

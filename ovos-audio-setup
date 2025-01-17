@@ -20,7 +20,7 @@ UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 
 # UDEV rule for auto-configuring soundcard when a USB soundcard is added/removed
 # It will trigger the soundcard autoconfigure systemd service instead of running a script directly
-UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/soundcard_autoconfigure"'
+UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", RUN+="/usr/libexec/soundcard_autoconfigure"'
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # - set default sink volume for that card
@@ -127,14 +127,10 @@ case $choice in
     fi
 
     # Enable autoconfigure rule by creating udev rule
-    if [ ! -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
-        echo "Creating udev rule for autoconfiguration of USB soundcards."
-        echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
-        echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
-        echo "$UDEV_SOUNDCARD_RULE"
-    else
-        echo "Udev rule already exists."
-    fi
+    echo "Creating udev rule for autoconfiguration of new soundcards."
+    echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
+    echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
+    echo "$UDEV_SOUNDCARD_RULE"
 
     # Disable USB autoconfigure udev rule
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then

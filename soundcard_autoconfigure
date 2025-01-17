@@ -1,18 +1,29 @@
 #!/bin/bash
 # /usr/libexec/autoconfigure-soundcard
+# This script automatically configures the default soundcard based on the detected devices.
 # Runs after ovos-i2csound and when a USB soundcard is connected/removed.
-# This script automatically configures the default soundcard based on the device detected.
+
+# Constants
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+SOUND_SERVER="pipewire"  # TODO: Add support for pulseaudio
 
 # Card names
 MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
 HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
 
+# Environment variables for PipeWire (or PulseAudio)
+export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
+export XDG_RUNTIME_DIR="/run/user/1000/"
 
-# Set error handling
+# Enable strict error handling
 set -euo pipefail
 
 # Function to handle errors
+# Logs an error message and exits the script.
+# Args:
+#   $1: Line number where the error occurred
+#   $2: Error code
 error_handler() {
     local line_no=$1
     local error_code=$2
@@ -22,7 +33,7 @@ error_handler() {
 
 trap 'error_handler ${LINENO} $?' ERR
 
-# Log function to write to a log file
+# Function to log messages to the console and a log file
 # Args:
 #   $1: Message to log
 log_message() {
@@ -30,34 +41,104 @@ log_message() {
     echo "$(date) - $1" >> /tmp/autosoundcard.log
 }
 
-# Function to set ALSA defaults for a given card number
-# Arguments:
-#   $1 - The card number to set as default
-# This function updates /etc/asound.conf or ~/.asoundrc with the provided card number for ALSA.
-set_alsa_defaults() {
-    local card_number=$1
-    log_message "Configuring ALSA default card"
-
-    # Determine the ALSA configuration file based on user permissions
-    if [ "$EUID" -eq 0 ]; then
-        # If running as root, modify /etc/asound.conf
-        log_message "Running as root, modifying /etc/asound.conf"
-        echo "defaults.pcm.card $card_number" | sudo tee /etc/asound.conf > /dev/null
-        echo "defaults.ctl.card $card_number" | sudo tee -a /etc/asound.conf > /dev/null
-    else
-        # If running as a user, modify ~/.asoundrc
-        log_message "Running as user, modifying ~/.asoundrc"
-        echo "defaults.pcm.card $card_number" > ~/.asoundrc
-        echo "defaults.ctl.card $card_number" >> ~/.asoundrc
-    fi
-
-    log_message "ALSA default card set to: $card_number"
+# Function to check if the script is running as root
+is_root() {
+    [ "$(id -u)" -eq 0 ]
 }
 
-# Allow ovos-i2csound to finish its setup (check if service exists before sleeping)
-sleep 1  # Wait for ovos-i2csound service to finish
+# Function to set ALSA defaults for a given card number
+# Updates ~/.asoundrc and sets default pipewire/pulseaudio sink.
+# Args:
+#   $1: The card number to set as default
+set_alsa_defaults() {
+    local card_number=$1
 
-# Check if the file exists before reading it
+    log_message "Configuring ALSA for PipeWire at '/home/$OVOS_USER/.asoundrc'"
+    echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > "/home/$OVOS_USER/.asoundrc"
+
+    local sink_name
+    sink_name=$(get_sink_name_from_card "$card_number")
+    # If sink name is found, set it as the default using pactl
+    if [ "$sink_name" != "Card index not found" ]; then
+        log_message "Setting default sink to: $sink_name"
+        # Use pactl to set the default sink for PipeWire (or PulseAudio)
+        if is_root; then
+            runuser -u "$OVOS_USER" -- pactl set-default-sink "$sink_name"
+        else
+            pactl set-default-sink "$sink_name"
+        fi
+        log_message "Default sink set to: $sink_name"
+    else
+        log_message "Failed to map card number to output sink. Unable to set default sink."
+    fi
+}
+
+# Function to get the card number associated with a given sink name
+# Arguments:
+#   $1 - Sink name to search for
+# Returns:
+#   The card number associated with the sink name
+get_card_from_sink() {
+    local search="$1"
+    if is_root; then
+        runuser -u "$OVOS_USER" -- pactl list sinks | awk -v search="$search" '
+            BEGIN {found = 0}
+            /Name: / {
+                if (index($2, search) > 0) {found = 1}
+                else {found = 0}
+            }
+            found && /api.alsa.card/ {card=$3}
+            END {gsub(/"/, "", card); print card}'
+    else
+        pactl list sinks | awk -v search="$search" '
+            BEGIN {found = 0}
+            /Name: / {
+                if (index($2, search) > 0) {found = 1}
+                else {found = 0}
+            }
+            found && /api.alsa.card/ {card=$3}
+            END {gsub(/"/, "", card); print card}'
+    fi
+}
+
+# Function to get the sink name associated with a given card index
+# Args:
+#   $1: The card index to search for
+# Returns:
+#   The sink name associated with the card index or an error message if not found
+get_sink_name_from_card() {
+    local card_index="$1"
+    if is_root; then
+        runuser -u "$OVOS_USER" -- pactl list sinks | awk -v card_index="$card_index" '
+          BEGIN {found = 0}
+          /Name: / { name = $2 }
+          /api.alsa.card/ {
+              gsub(/"/, "", $3)
+              if ($3 == card_index) {
+                  print name
+                  found = 1
+              }
+          }
+          END { if (found == 0) { print "Card index not found" } }'
+    else
+        pactl list sinks | awk -v card_index="$card_index" '
+          BEGIN {found = 0}
+          /Name: / { name = $2 }
+          /api.alsa.card/ {
+              gsub(/"/, "", $3)
+              if ($3 == card_index) {
+                  print name
+                  found = 1
+              }
+          }
+          END { if (found == 0) { print "Card index not found" } }'
+    fi
+}
+
+# Wait for ovos-i2csound to complete setup
+sleep 1
+
+# Read platform information
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
     i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
 else
@@ -65,25 +146,46 @@ else
     i2c_platform=""
 fi
 
-log_message "$(aplay -l)"  # Log the detected soundcards
+log_message "$(aplay -l)"  # Log detected soundcards
 
-# Autoconfigure default soundcard based on platform
+# Handle Mark 1-specific warnings
+if echo "$i2c_platform" | grep -q "WM8960"; then
+    # If it's a Mark 1 device, check for arduino boot failure symptoms
+    # WM8960 is wrongly detected by ovos-i2csound if mk1 fails to load
+    log_message "WARNING [Mark1 only]: If this is a Mark 1 device, Arduino may not have booted properly. Power cycle your device until the eyes spin."
+fi
+
+# Autoconfigure default soundcard
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
     log_message "Mark 1 soundcard detected by ovos-i2csound."
-    # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
     if aplay -l | grep "$MK1_CARD_NAME"; then
         CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
         log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
-        # Set ALSA defaults for the detected Mark 1 soundcard
         set_alsa_defaults "$CARD_NUMBER"
     else
-        log_message "Error: ovos-i2csound detected Mark1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
+        log_message "Error: ovos-i2csound detected Mark 1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
         exit 1
     fi
 else
     # Check for USB soundcard
-    USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    if aplay -l | grep "card" | grep -i "usb"; then
+        USB_CARDS=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1)
+        if [ -n "$USB_CARDS" ]; then
+            # If multiple USB soundcards are detected, log a warning and pick the last one
+            CARD_COUNT=$(echo "$USB_CARDS" | wc -l)
+            if [ "$CARD_COUNT" -gt 1 ]; then
+                log_message "Warning: Multiple USB soundcards detected. Using the last detected card."
+            fi
+            # Select the last USB soundcard detected
+            USB_CARD=$(echo "$USB_CARDS" | tail -n 1)
+        else
+            USB_CARD=""
+        fi
+    else
+        USB_CARD=""
+    fi
+
     if [ -n "$USB_CARD" ]; then
         # Set ALSA defaults for the detected USB soundcard
         log_message "USB soundcard detected."
