@@ -36,35 +36,23 @@ ID_MODEL=${ID_MODEL:-"unknown"}  # Model identifier of the connected device
 # Log the udev event with action and model details
 log_message "Udev event: ACTION=$ACTION, ID_MODEL=$ID_MODEL"
 
-# Check if 'pactl' command is available, which is necessary for controlling audio sinks
-if ! command -v pactl &>/dev/null; then
-    log_message "pactl not found. Ensure pulseaudio-utils is installed."
-    exit 1
-fi
+log_message "USB sound card connected: $ID_MODEL"
 
-# Check if this is an 'add' action for a USB sound card
-if [[ "$ACTION" == "add" ]]; then
-    log_message "USB sound card connected: $ID_MODEL"
+# Wait for the audio sinks to stabilize
+sleep "${STABILIZATION_DELAY}"
 
-    # Wait for the audio sinks to stabilize
-    sleep "${STABILIZATION_DELAY}"
+# Get the sink name corresponding to the USB soundcard using pactl
+USB_SINK=$(pactl list short sinks | grep -i "$ID_MODEL" | awk '{print $2}')
 
-    # Get the sink name corresponding to the USB soundcard using pactl
-    USB_SINK=$(pactl list short sinks | grep -i "$ID_MODEL" | awk '{print $2}')
-
-    # If the USB sink is found, adjust its volume
-    if [[ -n "$USB_SINK" ]]; then
-        # Set the volume for the USB sink to the default level
-        if pactl set-sink-volume "$USB_SINK" "${DEFAULT_VOLUME}%"; then
-            log_message "Set volume for USB sink: $USB_SINK to ${DEFAULT_VOLUME}%"
-        else
-            log_message "Failed to set volume for USB sink: $USB_SINK" "ERROR"
-        fi
+# If the USB sink is found, adjust its volume
+if [[ -n "$USB_SINK" ]]; then
+  # TODO - can we replace this with a alsa command to not require pactl?
+    # Set the volume for the USB sink to the default level
+    if pactl set-sink-volume "$USB_SINK" "${DEFAULT_VOLUME}%"; then
+        log_message "Set volume for USB sink: $USB_SINK to ${DEFAULT_VOLUME}%"
     else
-        log_message "No sink found for USB card: $ID_MODEL"
+        log_message "Failed to set volume for USB sink: $USB_SINK" "ERROR"
     fi
+else
+    log_message "No sink found for USB card: $ID_MODEL"
 fi
-
-# Recreate the merged audio sink
-log_message "Creating merged audio sinks..."
-sudo systemctl enable --now update-audio-sinks.service
