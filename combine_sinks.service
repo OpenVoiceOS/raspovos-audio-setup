@@ -1,5 +1,7 @@
 [Unit]
 Description=Sound Sink auto-combiner service
+Requires=systemd-modules-load.service
+After=systemd-modules-load.service
 
 [Service]
 Type=oneshot

@@ -1,5 +1,7 @@
 [Unit]
 Description=Sound card autoconfiguration service
+Requires=systemd-modules-load.service
+After=systemd-modules-load.service
 
 [Service]
 Type=oneshot
