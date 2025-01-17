@@ -29,7 +29,7 @@ log_message() {
     echo "$(date) - $1" >> /tmp/autosink-usb.log
 }
 
-# Read command line arguments
+# Read udev arguments
 ACTION=${ACTION:-"unknown"}  # Action type (e.g., 'add' or 'remove')
 ID_MODEL=${ID_MODEL:-"unknown"}  # Model identifier of the connected device
 

@@ -26,7 +26,8 @@ UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb
 # - set default sink volume for that card
 # - recreate combined sinks for output
 # NOTE: script must not run as root, otherwise it will mess up permissions for pactl
-UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/systemctl set-environment ID_MODEL=$env{ID_MODEL} ACTION=$env{ACTION}; /usr/bin/systemctl start usb-autovolume.service"'
+# TODO - how to pass env vars to the script?
+UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/systemctl start usb-autovolume.service"'
 
 # Service names
 COMBINED_SINKS_SERVICE="combine_sinks.service"

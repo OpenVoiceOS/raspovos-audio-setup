@@ -40,7 +40,6 @@ sudo chmod +x "/usr/libexec/soundcard_autoconfigure"
 sudo chmod +x "/usr/libexec/usb-autovolume"
 
 # Install dependencies
-apt-get update
 apt-get install -y --no-install-recommends pulseaudio-utils
 
 # Check if i2csound.service exists
