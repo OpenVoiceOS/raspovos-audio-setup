@@ -1,11 +1,6 @@
 #!/bin/bash
 # Configuration
 readonly DEFAULT_VOLUME=85                   # Default volume to set for USB soundcard
-readonly STABILIZATION_DELAY=5              # Delay (in seconds) to wait for sinks to stabilize
-
-# Set the necessary environment variables for PipeWire (or PulseAudio)
-export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
-export XDG_RUNTIME_DIR="/run/user/1000/"
 
 # Enable strict error handling
 set -euo pipefail
@@ -26,33 +21,25 @@ trap 'error_handler ${LINENO} $?' ERR
 # This appends messages with a timestamp to /tmp/autosink-usb.log
 log_message() {
     echo "$1"
-    echo "$(date) - $1" >> /tmp/autosink-usb.log
+    echo "$(date) - $1" >> /tmp/autovolume-usb.log
 }
 
-# Read udev arguments
-ACTION=${ACTION:-"unknown"}  # Action type (e.g., 'add' or 'remove')
-ID_MODEL=${ID_MODEL:-"unknown"}  # Model identifier of the connected device
+# Sleep for a brief moment to ensure the device is fully initialized
+sleep 1
 
-# Log the udev event with action and model details
-log_message "Udev event: ACTION=$ACTION, ID_MODEL=$ID_MODEL"
+# List sound devices and filter out USB audio devices
+aplay -l | grep -i "usb" | while read -r line; do
+    # Extract the soundcard index (e.g., "card 1")
+    card_index=$(echo "$line" | grep -oP 'card \K\d+')
 
-log_message "USB sound card connected: $ID_MODEL"
+    # Output the soundcard index for debugging
+    log_message "USB audio device detected. Soundcard index: $card_index"
 
-# Wait for the audio sinks to stabilize
-sleep "${STABILIZATION_DELAY}"
+    # Adjust the volume of the detected soundcard to 85% using amixer
+    amixer -c "$card_index" sset 'Master' 85%
 
-# Get the sink name corresponding to the USB soundcard using pactl
-USB_SINK=$(pactl list short sinks | grep -i "$ID_MODEL" | awk '{print $2}')
+    # You can also specify 'PCM' or another control if 'Master' doesn't exist for your device:
+    # amixer -c "$card_index" sset 'PCM' 85%
 
-# If the USB sink is found, adjust its volume
-if [[ -n "$USB_SINK" ]]; then
-  # TODO - can we replace this with a alsa command to not require pactl?
-    # Set the volume for the USB sink to the default level
-    if pactl set-sink-volume "$USB_SINK" "${DEFAULT_VOLUME}%"; then
-        log_message "Set volume for USB sink: $USB_SINK to ${DEFAULT_VOLUME}%"
-    else
-        log_message "Failed to set volume for USB sink: $USB_SINK" "ERROR"
-    fi
-else
-    log_message "No sink found for USB card: $ID_MODEL"
-fi
+    log_message "Volume set to 85% on card $card_index"
+done

@@ -31,9 +31,6 @@ UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb
 # - set default sink volume for that card
 # - recreate combined sinks for output
 UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="sudo -u $(getent passwd 1000 | cut -d: -f1) -i sh -c /usr/libexec/update-audio-sinks"'
-
-# TODO - how to pass env vars to the script?
-#  will need to map udev values to a specific soundcard and use amixer to set its volume
 UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="sudo -u $(getent passwd 1000 | cut -d: -f1) -i sh -c /usr/libexec/usb-autovolume"'
 
 # Service names
