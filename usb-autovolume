@@ -18,7 +18,7 @@ error_handler() {
 trap 'error_handler ${LINENO} $?' ERR
 
 # Log function to write messages to a log file
-# This appends messages with a timestamp to /tmp/autosink-usb.log
+# This appends messages with a timestamp to /tmp/autovolume-usb.log
 log_message() {
     echo "$1"
     echo "$(date) - $1" >> /tmp/autovolume-usb.log
@@ -32,14 +32,22 @@ log_message "$(aplay -l)"  # Log the detected soundcards
 # Check for USB soundcard
 USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
 if [ -n "$USB_CARD" ]; then
-  # Output the soundcard index for debugging
-  log_message "USB audio device detected. Soundcard index: $USB_CARD"
+    # Output the soundcard index for debugging
+    log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
-  # Adjust the volume of the detected soundcard to 85% using amixer
-  amixer -c "$USB_CARD" sset 'Master' 85%
+    # Detect the control name for the USB soundcard, like 'Master', 'Speaker', etc.
+    CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker' | head -n 1 | cut -d"'" -f2)
 
-  # You can also specify 'PCM' or another control if 'Master' doesn't exist for your device:
-  # amixer -c "$USB_CARD" sset 'PCM' 85%
+    # If no known control found, log an error
+    if [ -z "$CONTROL_NAME" ]; then
+        log_message "No valid control name found for USB soundcard (card $USB_CARD)"
+        exit 1
+    fi
 
-  log_message "Volume set to 85% on card $USB_CARD"
+    # Adjust the volume of the detected soundcard to 85% using amixer
+    amixer -c "$USB_CARD" sset "$CONTROL_NAME" "$DEFAULT_VOLUME%"
+
+    log_message "Volume set to $DEFAULT_VOLUME% on card $USB_CARD, control '$CONTROL_NAME'"
+else
+    log_message "No USB audio device detected."
 fi
