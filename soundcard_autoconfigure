@@ -47,7 +47,7 @@ set_alsa_defaults() {
     else
         # If running as a user, modify ~/.asoundrc
         log_message "Running as user, modifying ~/.asoundrc"
-        echo "defaults.pcm.card $card_number" >> ~/.asoundrc
+        echo "defaults.pcm.card $card_number" > ~/.asoundrc
         echo "defaults.ctl.card $card_number" >> ~/.asoundrc
     fi
 

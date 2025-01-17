@@ -124,20 +124,24 @@ Fri Jan 17 11:42:43 WET 2025 - Volume set to 85% on card 1, control 'Speaker'
 
 
 ==> /tmp/autosink.log  <==
-Fri 17 Jan 06:46:27 WET 2025 - Setting up audio output as combined sinks
-Fri 17 Jan 06:46:28 WET 2025 - auto_null sink exists, still booting? Sleeping for 3 seconds...
-Fri 17 Jan 06:46:31 WET 2025 - Sinks before action:\n 53	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
-54	alsa_output.platform-3f902000.hdmi.hdmi-stereo	PipeWire	s32le 2ch 48000Hz	SUSPENDED
-55	alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	SUSPENDED
-57	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	RUNNING
-Fri 17 Jan 06:46:32 WET 2025 - auto_combined sink missing
-Fri 17 Jan 06:46:32 WET 2025 - Total sinks: 4
-Fri 17 Jan 06:46:32 WET 2025 - Combined sink created with outputs: alsa_output.platform-bcm2835_audio.stereo-fallback,alsa_output.platform-3f902000.hdmi.hdmi-stereo,alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo,alsa_output.platform-soc_sound.stereo-fallback (module ID: 536870916)
-Fri 17 Jan 06:46:33 WET 2025 - Sinks after action:\n 53	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
-54	alsa_output.platform-3f902000.hdmi.hdmi-stereo	PipeWire	s32le 2ch 48000Hz	SUSPENDED
-55	alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	SUSPENDED
-57	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	IDLE
-91	auto_combined	PipeWire	float32le 2ch 48000Hz	RUNNING
+Setting up audio output as combined sinks
+Running as user
+Sinks before action: 52	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+53	alsa_output.platform-3f902000.hdmi.hdmi-stereo	PipeWire	s32le 2ch 48000Hz	SUSPENDED
+54	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	RUNNING
+56	alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+alsa_output.platform-bcm2835_audio.stereo-fallback
+alsa_output.platform-3f902000.hdmi.hdmi-stereo
+alsa_output.platform-soc_sound.stereo-fallback
+alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo
+auto_combined sink missing
+Total sinks: 4
+Combined sink created with outputs: alsa_output.platform-bcm2835_audio.stereo-fallback,alsa_output.platform-3f902000.hdmi.hdmi-stereo,alsa_output.platform-soc_sound.stereo-fallback,alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo (module ID: 536870916)
+Sinks after action: 52	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+53	alsa_output.platform-3f902000.hdmi.hdmi-stereo	PipeWire	s32le 2ch 48000Hz	SUSPENDED
+54	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	RUNNING
+56	alsa_output.usb-GeneralPlus_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+108	auto_combined	PipeWire	float32le 2ch 48000Hz	SUSPENDED
 
 ```
 
