@@ -24,10 +24,6 @@ sudo cp "$COMBINED_SINKS_SERVICE_PATH" "$SYSTEMD_SERVICE_DIR"
 echo "Reloading systemd to apply new services..."
 sudo systemctl daemon-reload
 
-# Enable and start the services
-echo "Enabling and starting autoconfigure_soundcard and combine_sinks services..."
-sudo systemctl enable --now autoconfigure_soundcard.service
-
 # Install other scripts to /usr/local/bin and /usr/libexec
 echo "Installing additional scripts..."
 sudo cp "$OVOS_AUDIO_SETUP_SCRIPT_PATH" "/usr/local/bin/ovos-audio-setup"
@@ -45,3 +41,6 @@ sudo chmod +x "/usr/libexec/usb-autovolume"
 
 # Final message
 echo "Installation completed successfully!"
+
+# Run setup!
+/usr/local/bin/ovos-audio-setup
