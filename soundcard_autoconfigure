@@ -45,6 +45,8 @@ log_message() {
 set_alsa_defaults() {
     local card_number=$1
     log_message "Configuring ALSA default card"
+    # TODO - from system service it crashes here without logs, we never get the next one
+    #  from cli works fine ???
     # Set the default PCM card
     echo "defaults.pcm.card $card_number" | $SUDO_CMD tee /etc/asound.conf > /dev/null
     # Set the default control card
