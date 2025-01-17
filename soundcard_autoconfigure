@@ -67,6 +67,13 @@ fi
 
 log_message "$(aplay -l)"  # Log the detected soundcards
 
+# Warn about potential Mk1 boot failure
+if echo "$i2c_platform" | grep -q "WM8960"; then
+    # If it's a Mark 1 device check for arduino boot failure symptoms
+    # WM8960 is wrongly detected by ovos-i2csound if mk1 fails to load
+    log_message "WARNING [Mark1 only]: if this is a Mark 1 device it seems like arduino didn't boot properly, please power cycle your device until the eyes start spinning"
+fi
+
 # Autoconfigure default soundcard based on platform
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
@@ -83,7 +90,12 @@ if echo "$i2c_platform" | grep -q "MARK1"; then
     fi
 else
     # Check for USB soundcard
-    USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    if aplay -l | grep "card" | grep -i "usb"; then
+        USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    else
+        USB_CARD=""
+    fi
+
     if [ -n "$USB_CARD" ]; then
         # Set ALSA defaults for the detected USB soundcard
         log_message "USB soundcard detected."
