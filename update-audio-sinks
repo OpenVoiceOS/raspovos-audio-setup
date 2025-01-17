@@ -13,6 +13,13 @@ export XDG_RUNTIME_DIR="/run/user/1000/"
 # Set error handling
 set -euo pipefail
 
+
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
+HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
+HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
+
+
 # Function to handle errors
 error_handler() {
     local line_no=$1
