@@ -127,14 +127,10 @@ case $choice in
     fi
 
     # Enable autoconfigure rule by creating udev rule
-    if [ ! -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
-        echo "Creating udev rule for autoconfiguration of USB soundcards."
-        echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
-        echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
-        echo "$UDEV_SOUNDCARD_RULE"
-    else
-        echo "Udev rule already exists."
-    fi
+    echo "Creating udev rule for autoconfiguration of new soundcards."
+    echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
+    echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
+    echo "$UDEV_SOUNDCARD_RULE"
 
     # Disable USB autoconfigure udev rule
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
