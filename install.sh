@@ -39,8 +39,47 @@ sudo chmod +x "/usr/libexec/update-audio-sinks"
 sudo chmod +x "/usr/libexec/soundcard_autoconfigure"
 sudo chmod +x "/usr/libexec/usb-autovolume"
 
+# Check if i2csound.service exists
+if [ ! -f /etc/systemd/system/i2csound.service ]; then
+    echo "/etc/systemd/system/i2csound.service is missing. Automatic audio drivers setup is not available"
+
+    # Prompt the user
+    read -p "Would you like to install ovos-i2csound? [y/N] " response
+    case "$response" in
+        [yY][eE][sS]|[yY])
+            echo "Installing ovos-i2csound..."
+
+            # Install dependencies
+            apt-get update
+            apt-get install -y --no-install-recommends i2c-tools pulseaudio-utils
+
+            # Clone and copy files
+            git clone https://github.com/OpenVoiceOS/ovos-i2csound /tmp/ovos-i2csound
+            cp /tmp/ovos-i2csound/i2c.conf /etc/modules-load.d/i2c.conf
+            cp /tmp/ovos-i2csound/bcm2835-alsa.conf /etc/modules-load.d/bcm2835-alsa.conf
+            cp /tmp/ovos-i2csound/i2csound.service /etc/systemd/system/i2csound.service
+            cp /tmp/ovos-i2csound/ovos-i2csound /usr/libexec/ovos-i2csound
+            cp /tmp/ovos-i2csound/99-i2c.rules /usr/lib/udev/rules.d/99-i2c.rules
+
+            # Set permissions
+            chmod 644 /etc/systemd/system/i2csound.service
+            chmod +x /usr/libexec/ovos-i2csound
+
+            # Enable the service
+            ln -s /etc/systemd/system/i2csound.service /etc/systemd/system/multi-user.target.wants/i2csound.service
+
+            echo "ovos-i2csound installed and enabled successfully."
+            ;;
+        *)
+            echo "Skipping ovos-i2csound installation."
+            ;;
+    esac
+else
+    echo "i2csound.service is installed!"
+fi
+
 # Final message
-echo "Installation completed successfully!"
+echo "Installation of 'ovos-audio-setup' completed successfully!"
 
 # Run setup!
 /usr/local/bin/ovos-audio-setup
