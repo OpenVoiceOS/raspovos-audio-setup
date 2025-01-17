@@ -112,7 +112,7 @@ case $choice in
     # Enable autoconfigure rule by creating udev rule
     if [ ! -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
         echo "Creating udev rule for autoconfiguration of USB soundcards."
-        echo "$UDEV_UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_UDEV_SOUNDCARD_RULE_FILE" > /dev/null
+        echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
         echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
     else
         echo "Udev rule already exists."
