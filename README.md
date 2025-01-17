@@ -161,7 +161,13 @@ Sinks after action: 52	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWi
 
 ---
 
-Enjoy configuring your audio setup with ease! 🎉  
+Enjoy configuring your audio setup with ease! 🎉
 
+## Credits
 
+<img src="img.png" width="128"/>
 
+> This work was funded by the Ministerio para la Transformación Digital y de la Función Pública and Plan de
+> Recuperación, Transformación y Resiliencia - Funded by EU – NextGenerationEU within the framework of the project
+> ILENIA
+> with reference 2022/TL22/00215337
