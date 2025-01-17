@@ -62,6 +62,8 @@ if [ -n "$USB_CARDS" ]; then
         exit 1
     fi
 
+    log_message "Mixer name: $CONTROL_NAME"
+
     # Adjust the volume of the detected soundcard to 85% using amixer
     amixer -c "$USB_CARD" sset "$CONTROL_NAME" "$DEFAULT_VOLUME%"
 
