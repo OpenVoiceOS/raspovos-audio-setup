@@ -13,8 +13,6 @@ UPDATE_AUDIO_SINKS_SCRIPT_PATH="./update-audio-sinks"
 
 # Target directories
 SYSTEMD_SERVICE_DIR="/etc/systemd/system"
-UDEV_RULES_DIR="/etc/udev/rules.d"
-SCRIPTS_DIR="/usr/local/bin"
 
 # Install systemd services
 echo "Installing systemd services..."

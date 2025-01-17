@@ -80,6 +80,7 @@ case $choice in
     echo "Setting ALSA default card to: $user_card"
     echo "defaults.pcm.card $user_card" | sudo tee /etc/asound.conf > /dev/null
     echo "defaults.ctl.card $user_card" | sudo tee -a /etc/asound.conf > /dev/null
+
     # Disable autoconfigure udev rule
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
         echo "Disabling autoconfigure rule."
@@ -87,8 +88,10 @@ case $choice in
     fi
 
     # Disable USB autoconfigure udev rule
-    echo "Disabling USB autovolume rule."
-    sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
+      echo "Disabling USB autovolume rule."
+      sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    fi
 
     # Reload udev rules after removing the rule
     echo "Reloading udev rules to apply changes..."
@@ -116,8 +119,10 @@ case $choice in
     fi
 
     # Disable USB autoconfigure udev rule
-    echo "Disabling USB autovolume rule."
-    sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
+      echo "Disabling USB autovolume rule."
+      sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    fi
 
     # Reload udev rules to apply the new rule immediately
     echo "Reloading udev rules to apply changes..."
@@ -133,11 +138,13 @@ case $choice in
     else
         echo "Error: Failed to enable $COMBINED_SINKS_SERVICE."
     fi
+
     # Disable autoconfigure udev rule
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
         echo "Disabling soundcard rule."
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
     fi
+
     # Enable USB autoconfigure udev rule
     echo "Creating udev rule for USB autovolume."
     echo "$UDEV_USB_AUTO_VOLUME_RULE" | sudo tee "$UDEV_USB_AUTO_VOLUME_RULE_FILE" > /dev/null
