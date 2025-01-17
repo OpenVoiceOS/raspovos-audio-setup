@@ -1,0 +1,159 @@
+#!/bin/bash
+
+# /usr/libexec/autoconfigure-sound
+# This script automatically configures the default soundcard based on the detected hardware.
+# It is triggered by the user, ovos-i2csound or udev rules when a USB soundcard is connected or removed.
+
+# Main Logic
+# 1. If an I2C device file exists, check the platform for Mark 1 soundcard.
+# 2. If a Mark 1 soundcard is detected, set it as the ALSA default card.
+# 3. If no Mark 1 soundcard is detected:
+#    - Check for USB soundcards and set the first one detected as the ALSA default card.
+#    - If no USB soundcard is found, fallback to onboard BCM soundcard.
+# 4. If no soundcard is detected, log an error message.
+
+# I2C_DEVICE_FILE and UDEV_SOUNDCARD_RULE_FILE are used for detecting and configuring soundcards automatically.
+I2C_DEVICE_FILE="/etc/OpenVoiceOS/i2c_platform"
+UDEV_SOUNDCARD_RULE_FILE="/etc/udev/rules.d/99-autoconfigure-sound.rules"
+UDEV_USB_AUTO_VOLUME_RULE_FILE="/etc/udev/rules.d/99-usb-autovolume.rules"
+
+# when a usb soundcard is connected autoconfigure soundcard (unless it's a mk1 will make it the default)
+UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/soundcard_autoconfigure"'
+
+# if combined_sinks.service is enabled, when a usb soundcard is connected
+# - set default sink volume for that card
+# - recreate combined sinks for output
+# NOTE: script must not run as root, otherwise it will mess up permissions for pactl
+UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/sudo -u $(getent passwd 1000 | cut -d: -f1) /usr/libexec/usb-autovolume add \"$env{ID_MODEL}\""'
+
+# Service names
+COMBINED_SINKS_SERVICE="combine_sinks.service"
+AUTOCONFIGURE_SERVICE="autoconfigure_soundcard.service"
+
+# Function to disable conflicting services
+# Disables a service if it is active.
+disable_service() {
+    local service_name=$1
+    if systemctl is-active --quiet "$service_name"; then
+        echo "Disabling $service_name..."
+        sudo systemctl disable --now "$service_name"
+        if [ $? -eq 0 ]; then
+            echo "$service_name disabled successfully."
+        else
+            echo "Error: Failed to disable $service_name."
+        fi
+    fi
+}
+
+# Function to print usage instructions
+usage() {
+    echo "Usage: $0 [choice]"
+    echo "Choices:"
+    echo "  1 - Set default soundcard"
+    echo "  2 - Autoconfigure default soundcard"
+    echo "  3 - Enable combined audio sinks"
+    echo "  4 - Exit"
+    exit 1
+}
+
+# Get the choice from the command-line argument or prompt the user
+if [ $# -gt 0 ]; then
+    choice=$1
+else
+    echo "Audio Setup Options:"
+    echo "1) Set default soundcard"
+    echo "2) Autoconfigure default soundcard"
+    echo "3) Enable combined audio sinks"
+    echo "4) Exit"
+    read -p "Choose an option: " choice
+fi
+
+# Main logic based on user's choice
+case $choice in
+1)
+    # Choice 1: Set default soundcard
+    disable_service "$COMBINED_SINKS_SERVICE"
+    disable_service "$AUTOCONFIGURE_SERVICE"
+    echo "Available sound cards:"
+    aplay -l
+    read -p "Enter the card number to set as default: " user_card
+    echo "Setting ALSA default card to: $user_card"
+    echo "defaults.pcm.card $user_card" | sudo tee /etc/asound.conf > /dev/null
+    echo "defaults.ctl.card $user_card" | sudo tee -a /etc/asound.conf > /dev/null
+    # Disable autoconfigure udev rule
+    if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
+        echo "Disabling autoconfigure rule."
+        sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
+    fi
+
+    # Disable USB autoconfigure udev rule
+    echo "Disabling USB autovolume rule."
+    sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+
+    # Reload udev rules after removing the rule
+    echo "Reloading udev rules to apply changes..."
+    sudo udevadm control --reload
+
+    ;;
+2)
+    # Choice 2: Autoconfigure default soundcard
+    disable_service "$COMBINED_SINKS_SERVICE"
+    echo "Enabling $AUTOCONFIGURE_SERVICE..."
+    sudo systemctl enable --now "$AUTOCONFIGURE_SERVICE"
+    if [ $? -eq 0 ]; then
+        echo "$AUTOCONFIGURE_SERVICE enabled successfully."
+    else
+        echo "Error: Failed to enable $AUTOCONFIGURE_SERVICE."
+    fi
+
+    # Enable autoconfigure rule by creating udev rule
+    if [ ! -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
+        echo "Creating udev rule for autoconfiguration of USB soundcards."
+        echo "$UDEV_UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_UDEV_SOUNDCARD_RULE_FILE" > /dev/null
+        echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
+    else
+        echo "Udev rule already exists."
+    fi
+
+    # Disable USB autoconfigure udev rule
+    echo "Disabling USB autovolume rule."
+    sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
+
+    # Reload udev rules to apply the new rule immediately
+    echo "Reloading udev rules to apply changes..."
+    sudo udevadm control --reload
+    ;;
+3)
+    # Choice 3: Enable combined audio sinks
+    disable_service "$AUTOCONFIGURE_SERVICE"
+    echo "Enabling $COMBINED_SINKS_SERVICE..."
+    sudo systemctl enable --now "$COMBINED_SINKS_SERVICE"
+    if [ $? -eq 0 ]; then
+        echo "$COMBINED_SINKS_SERVICE enabled successfully."
+    else
+        echo "Error: Failed to enable $COMBINED_SINKS_SERVICE."
+    fi
+    # Disable autoconfigure udev rule
+    if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
+        echo "Disabling soundcard rule."
+        sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
+    fi
+    # Enable USB autoconfigure udev rule
+    echo "Creating udev rule for USB autovolume."
+    echo "$UDEV_USB_AUTO_VOLUME_RULE" | sudo tee "$UDEV_USB_AUTO_VOLUME_RULE_FILE" > /dev/null
+    echo "Udev rule for USB autovolume created: $UDEV_USB_AUTO_VOLUME_RULE_FILE"
+
+    # Reload udev rules after removing the rule
+    echo "Reloading udev rules to apply changes..."
+    sudo udevadm control --reload
+    ;;
+4)
+    # Exit
+    echo "Exiting audio setup."
+    ;;
+*)
+    # Invalid choice
+    echo "Invalid choice."
+    usage
+    ;;
+esac

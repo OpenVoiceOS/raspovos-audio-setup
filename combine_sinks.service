@@ -1,0 +1,11 @@
+[Unit]
+Description=Sound Sink auto-combiner service
+
+[Service]
+Type=oneshot
+Group=ovos
+UMask=002
+ExecStart=/usr/libexec/update-audio-sinks
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5

@@ -1,0 +1,75 @@
+#!/bin/bash
+# Configuration
+readonly DEFAULT_VOLUME=85                   # Default volume to set for USB soundcard
+readonly STABILIZATION_DELAY=5              # Delay (in seconds) to wait for sinks to stabilize
+
+# Set the necessary environment variables for PipeWire (or PulseAudio)
+export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
+export XDG_RUNTIME_DIR="/run/user/1000/"
+
+# Enable strict error handling
+set -euo pipefail
+
+# Function to handle errors
+# Logs an error message with the line number and error code, then exits
+error_handler() {
+    local line_no=$1
+    local error_code=$2
+    log_message "Error (code: ${error_code}) occurred on line ${line_no}"
+    exit ${error_code}
+}
+
+# Trap any error and pass it to the error handler
+trap 'error_handler ${LINENO} $?' ERR
+
+# Log function to write messages to a log file
+# This appends messages with a timestamp to /tmp/autosink-usb.log
+log_message() {
+    echo "$(date) - $1" >> /tmp/autosink-usb.log
+}
+
+# Read command line arguments
+ACTION=${1:-"unknown"}  # Action type (e.g., 'add' or 'remove')
+ID_MODEL=${2:-"unknown"}  # Model identifier of the connected device
+
+# Log the udev event with action and model details
+log_message "Udev event: ACTION=$ACTION, ID_MODEL=$ID_MODEL"
+
+# Check if 'pactl' command is available, which is necessary for controlling audio sinks
+if ! command -v pactl &>/dev/null; then
+    log_message "pactl not found. Ensure pulseaudio-utils is installed."
+    exit 1
+fi
+
+# Check if the script is being run as root
+if [[ "$(id -u)" -eq 0 ]]; then
+    # If running as root, abort and log an error to avoid pactl permission issues
+    log_message "Error: Script should not be run as root due to pactl permissions."
+    exit 1
+fi
+
+# Check if this is an 'add' action for a USB sound card
+if [[ "$ACTION" == "add" ]]; then
+    log_message "USB sound card connected: $ID_MODEL"
+
+    # Wait for the audio sinks to stabilize
+    sleep "${STABILIZATION_DELAY}"
+
+    # Get the sink name corresponding to the USB soundcard using pactl
+    USB_SINK=$(pactl list short sinks | grep -i "$ID_MODEL" | awk '{print $2}')
+
+    # If the USB sink is found, adjust its volume
+    if [[ -n "$USB_SINK" ]]; then
+        # Set the volume for the USB sink to the default level
+        if pactl set-sink-volume "$USB_SINK" "${DEFAULT_VOLUME}%"; then
+            log_message "Set volume for USB sink: $USB_SINK to ${DEFAULT_VOLUME}%"
+        else
+            log_message "Failed to set volume for USB sink: $USB_SINK" "ERROR"
+        fi
+    else
+        log_message "No sink found for USB card: $ID_MODEL"
+    fi
+fi
+
+# Recreate the merged audio sink
+systemctl --user enable --now update-audio-sinks.service

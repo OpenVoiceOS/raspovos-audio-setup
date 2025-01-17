@@ -1,0 +1,74 @@
+#!/bin/bash
+# /usr/libexec/autoconfigure-soundcard
+# Runs after ovos-i2csound and when a USB soundcard is connected/removed.
+# This script automatically configures the default soundcard based on the device detected.
+
+# Card names
+MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
+HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
+HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
+
+# Function to set ALSA defaults for a given card number
+# Arguments:
+#   $1 - The card number to set as default
+# This function updates /etc/asound.conf with the provided card number for ALSA.
+set_alsa_defaults() {
+    local card_number=$1
+    # Set the default PCM card
+    echo "defaults.pcm.card $card_number" | sudo tee /etc/asound.conf > /dev/null
+    # Set the default control card
+    echo "defaults.ctl.card $card_number" | sudo tee -a /etc/asound.conf > /dev/null
+    echo "ALSA default card set to: $card_number"
+}
+
+# Read the I2C device configuration to check if it's a Mark 1 device
+i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+
+# Autoconfigure default soundcard based on platform
+if echo "$i2c_platform" | grep -q "MARK1"; then
+    # If it's a Mark 1 device, configure the Mark 1 soundcard
+    echo "Mark 1 soundcard detected."
+    CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
+
+    if [ -n "$CARD_NUMBER" ]; then
+        # Set ALSA defaults for the detected Mark 1 soundcard
+        set_alsa_defaults "$CARD_NUMBER"
+    else
+        echo "Error: Could not detect Mark 1 soundcard."
+    fi
+else
+    # Check for USB soundcard
+    USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    if [ -n "$USB_CARD" ]; then
+        # Set ALSA defaults for the detected USB soundcard
+        echo "USB soundcard detected."
+        set_alsa_defaults "$USB_CARD"
+    else
+        # Check for any other non-BCM soundcard (prioritize user-installed cards over onboard ones)
+        OTHER_CARD=$(aplay -l | grep "card"  | grep -v -i "$HEADPHONES_CARD_NAME" | grep -v -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+        if [ -n "$OTHER_CARD" ]; then
+            # Set ALSA defaults for the user-installed soundcard
+            echo "User-installed soundcard detected."
+            set_alsa_defaults "$OTHER_CARD"
+        else
+            # Default to onboard BCM soundcard if no other card is found
+            BCM_CARD=$(aplay -l | grep "card" | grep -i "$HEADPHONES_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+            if [ -n "$BCM_CARD" ]; then
+                # Set ALSA defaults for the onboard BCM soundcard
+                echo "Onboard BCM soundcard detected."
+                set_alsa_defaults "$BCM_CARD"
+            else
+                # Fall back to HDMI soundcard if no onboard card is found
+                HDMI_CARD=$(aplay -l | grep "card" | grep -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+                if [ -n "$HDMI_CARD" ]; then
+                    # Set ALSA defaults for the HDMI soundcard
+                    echo "HDMI soundcard detected."
+                    set_alsa_defaults "$HDMI_CARD"
+                else
+                    # No suitable soundcard detected, log an error
+                    echo "Error: No suitable soundcard detected."
+                fi
+            fi
+        fi
+    fi
+fi

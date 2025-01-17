@@ -1,0 +1,11 @@
+[Unit]
+Description=Sound card autoconfiguration service
+
+[Service]
+Type=oneshot
+Group=ovos
+UMask=002
+ExecStart=/usr/libexec/soundcard_autoconfigure
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5
