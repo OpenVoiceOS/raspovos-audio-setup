@@ -137,7 +137,18 @@ if echo "$i2c_platform" | grep -q "MARK1"; then
 else
     # Check for USB soundcard
     if aplay -l | grep "card" | grep -i "usb"; then
-        USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+        USB_CARDS=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1)
+        if [ -n "$USB_CARDS" ]; then
+            # If multiple USB soundcards are detected, log a warning and pick the last one
+            CARD_COUNT=$(echo "$USB_CARDS" | wc -l)
+            if [ "$CARD_COUNT" -gt 1 ]; then
+                log_message "Warning: Multiple USB soundcards detected. Using the last detected card."
+            fi
+            # Select the last USB soundcard detected
+            USB_CARD=$(echo "$USB_CARDS" | tail -n 1)
+        else
+            USB_CARD=""
+        fi
     else
         USB_CARD=""
     fi

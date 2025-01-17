@@ -53,6 +53,12 @@ if [ -n "$USB_CARDS" ]; then
     # Output the soundcard index for debugging
     log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
+    # Validate USB_CARD is numeric
+    if ! [[ "$USB_CARD" =~ ^[0-9]+$ ]]; then
+        log_message "Error: Invalid soundcard number: $USB_CARD"
+        exit 1
+    fi
+
     # Detect the control name for the USB soundcard, like 'Master', 'Speaker', etc.
     CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker\|Headphone\|Front\|Output\|PCM' | head -n 1 | cut -d"'" -f2)
 
