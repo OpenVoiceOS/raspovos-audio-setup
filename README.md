@@ -79,6 +79,7 @@ You can configure audio using the provided script, `ovos-audio-setup`. It allows
 ### 📊 Logging
 
 - All scripts generate logs, which are saved to the `/tmp` directory:
+  - **/tmp/autosoundcard.log** (for soundcard autoconfiguration)
   - **/tmp/autosink-usb.log** (for USB soundcard udev events)
   - **/tmp/autosink.log** (for sink creation and merging events)
 

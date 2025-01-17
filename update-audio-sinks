@@ -28,15 +28,9 @@ trap 'error_handler ${LINENO} $?' ERR
 # Args:
 #   $1: Message to log
 log_message() {
+    echo "$1"
     echo "$(date) - $1" >> /tmp/autosink.log
 }
-
-# Check if the script is being run as root
-if [[ "$(id -u)" -eq 0 ]]; then
-    # If running as root, abort and log an error to avoid pactl permission issues
-    log_message "Error: Script should not be run as root due to pactl permissions."
-    exit 1
-fi
 
 # Ensure pactl is available
 if ! command -v pactl &>/dev/null; then

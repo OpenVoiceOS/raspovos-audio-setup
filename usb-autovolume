@@ -25,6 +25,7 @@ trap 'error_handler ${LINENO} $?' ERR
 # Log function to write messages to a log file
 # This appends messages with a timestamp to /tmp/autosink-usb.log
 log_message() {
+    echo "$1"
     echo "$(date) - $1" >> /tmp/autosink-usb.log
 }
 
@@ -41,12 +42,6 @@ if ! command -v pactl &>/dev/null; then
     exit 1
 fi
 
-# Check if the script is being run as root
-if [[ "$(id -u)" -eq 0 ]]; then
-    # If running as root, abort and log an error to avoid pactl permission issues
-    log_message "Error: Script should not be run as root due to pactl permissions."
-    exit 1
-fi
 
 # Check if this is an 'add' action for a USB sound card
 if [[ "$ACTION" == "add" ]]; then
