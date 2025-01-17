@@ -20,10 +20,10 @@ The setup ensures that conflicting services are disabled, as the `autoconfigure_
    Installation script that sets up all necessary files and configurations, including copying scripts to the appropriate directories and enabling systemd services. 
 
 4. **ovos-audio-setup**  
-   A main script that provides an interactive setup menu to configure the default soundcard, enable automatic soundcard configuration, or enable combined audio sinks. 
+   Main script that provides an interactive setup menu to configure the default soundcard, enable automatic soundcard configuration, or enable combined audio sinks. 
 
 5. **soundcard_autoconfigure**  
-   Automatically detects and configures the default soundcard, prioritizing USB soundcards and Mark 1 soundcards when connected. Falls back to onboard soundcards if no external soundcards are found. 
+   Automatically detects and configures the default soundcard, prioritizing USB soundcards. Falls back to onboard soundcards if no external soundcards are found. (`Mark1 > USB > other > Headphones > HDMI`)
 
 6. **update-audio-sinks**  
    Manages PulseAudio/PipeWire sinks, specifically for combining audio sinks when multiple devices are detected. 
