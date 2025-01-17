@@ -43,6 +43,9 @@ set_alsa_defaults() {
     log_message "ALSA default card set to: $card_number"
 }
 
+# Allow ovos-i2csound to finish its setup (check if service exists before sleeping)
+sleep 5  # Wait for ovos-i2csound service to finish
+
 # Check if the file exists before reading it
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
     i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
@@ -55,7 +58,7 @@ fi
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
     log_message "Mark 1 soundcard detected."
-    # NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
+    # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
     CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
 
     if [ -n "$CARD_NUMBER" ]; then
@@ -102,5 +105,4 @@ else
     fi
 fi
 
-log_message "$(aplay - l)"
-
+log_message "$(aplay -l)"  # Log the detected soundcards
