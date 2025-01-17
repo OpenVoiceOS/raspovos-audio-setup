@@ -84,7 +84,7 @@ examples logs you can expect
 ```
 (ovos) ovos@raspOVOS:~ $ tail -f /tmp/*.log
 ==> /tmp/autosoundcard.log <==
-Fri 17 Jan 10:46:56 WET 2025 - **** List of PLAYBACK Hardware Devices ****
+Fri 17 Jan 11:42:46 WET 2025 - **** List of PLAYBACK Hardware Devices ****
 card 0: Headphones [bcm2835 Headphones], device 0: bcm2835 Headphones [bcm2835 Headphones]
   Subdevices: 8/8
   Subdevice #0: subdevice #0
@@ -104,22 +104,23 @@ card 2: vc4hdmi [vc4-hdmi], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]
 card 3: sndrpiproto [snd_rpi_proto], device 0: WM8731 HiFi wm8731-hifi-0 [WM8731 HiFi wm8731-hifi-0]
   Subdevices: 0/1
   Subdevice #0: subdevice #0
-Fri 17 Jan 10:46:56 WET 2025 - Mark 1 soundcard detected by ovos-i2csound.
-Fri 17 Jan 10:46:56 WET 2025 - Detected CARD_NUMBER for Mark 1 soundcard: 3
-Fri 17 Jan 10:46:56 WET 2025 - Configuring ALSA default card
-
+Fri 17 Jan 11:42:48 WET 2025 - Mark 1 soundcard detected by ovos-i2csound.
+Fri 17 Jan 11:42:48 WET 2025 - Detected CARD_NUMBER for Mark 1 soundcard: 3
+Fri 17 Jan 11:42:48 WET 2025 - Configuring ALSA default card
+Fri 17 Jan 11:42:48 WET 2025 - Running as user, modifying ~/.asoundrc
+Fri 17 Jan 11:42:48 WET 2025 - ALSA default card set to: 3
 
 ==> /tmp/autovolume-usb.log <==
-  Subdevice #6: subdevice #6
-  Subdevice #7: subdevice #7
-card 1: Device [USB Audio Device], device 0: USB Audio [USB Audio]
   Subdevices: 1/1
   Subdevice #0: subdevice #0
 card 2: vc4hdmi [vc4-hdmi], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]
   Subdevices: 1/1
   Subdevice #0: subdevice #0
-Fri Jan 17 10:28:03 WET 2025 - USB audio device detected. Soundcard index: 1
-Fri Jan 17 10:28:03 WET 2025 - Volume set to 85% on card 1, control 'Speaker'
+card 3: sndrpiproto [snd_rpi_proto], device 0: WM8731 HiFi wm8731-hifi-0 [WM8731 HiFi wm8731-hifi-0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+Fri Jan 17 11:42:43 WET 2025 - USB audio device detected. Soundcard index: 1
+Fri Jan 17 11:42:43 WET 2025 - Volume set to 85% on card 1, control 'Speaker'
 
 
 ==> /tmp/autosink.log  <==
