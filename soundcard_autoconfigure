@@ -70,7 +70,7 @@ if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
     log_message "Mark 1 soundcard detected by ovos-i2csound."
     # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
-    if [ aplay -l | grep "$MK1_CARD_NAME" ]; then
+    if aplay -l | grep "$MK1_CARD_NAME"; then
         CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
         log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
         # Set ALSA defaults for the detected Mark 1 soundcard
@@ -79,7 +79,6 @@ if echo "$i2c_platform" | grep -q "MARK1"; then
         log_message "Error: ovos-i2csound detected Mark1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
         exit 1
     fi
-
 else
     # Check for USB soundcard
     USB_CARD=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
