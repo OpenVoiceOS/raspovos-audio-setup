@@ -17,14 +17,16 @@ I2C_DEVICE_FILE="/etc/OpenVoiceOS/i2c_platform"
 UDEV_SOUNDCARD_RULE_FILE="/etc/udev/rules.d/99-autoconfigure-sound.rules"
 UDEV_USB_AUTO_VOLUME_RULE_FILE="/etc/udev/rules.d/99-usb-autovolume.rules"
 
-# when a usb soundcard is connected autoconfigure soundcard (unless it's a mk1 will make it the default)
-UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/soundcard_autoconfigure"'
+# UDEV rule for auto-configuring soundcard when a USB soundcard is added/removed
+# It will trigger the soundcard autoconfigure systemd service instead of running a script directly
+UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/systemctl start soundcard-autoconfigure.service"'
 
-# if combined_sinks.service is enabled, when a usb soundcard is connected
+# UDEV rule for auto setting USB soundcard volume and recreating combined sinks
+# This triggers the service for user 1000
 # - set default sink volume for that card
 # - recreate combined sinks for output
 # NOTE: script must not run as root, otherwise it will mess up permissions for pactl
-UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/sudo -u $(getent passwd 1000 | cut -d: -f1) /usr/libexec/usb-autovolume add \"$env{ID_MODEL}\""'
+UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/bin/systemctl set-environment ID_MODEL=$env{ID_MODEL} ACTION=$env{ACTION}; /usr/bin/systemctl start usb-autovolume.service"'
 
 # Service names
 COMBINED_SINKS_SERVICE="combine_sinks.service"

@@ -5,8 +5,7 @@ After=systemd-modules-load.service
 
 [Service]
 Type=oneshot
-Group=ovos
-UMask=002
+User=1000
 ExecStart=/usr/libexec/update-audio-sinks
 RemainAfterExit=yes
 Restart=on-failure

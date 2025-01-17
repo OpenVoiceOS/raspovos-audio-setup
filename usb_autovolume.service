@@ -1,0 +1,11 @@
+[Unit]
+Description=USB Sound card combined sink service
+
+[Service]
+Type=oneshot
+User=1000
+ExecStart=/usr/libexec/usb_autovolume
+EnvironmentFile=/run/usb_autovolume.env
+RemainAfterExit=yes
+Restart=on-failure
+RestartSec=5

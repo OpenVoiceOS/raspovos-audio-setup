@@ -30,8 +30,8 @@ log_message() {
 }
 
 # Read command line arguments
-ACTION=${1:-"unknown"}  # Action type (e.g., 'add' or 'remove')
-ID_MODEL=${2:-"unknown"}  # Model identifier of the connected device
+ACTION=${ACTION:-"unknown"}  # Action type (e.g., 'add' or 'remove')
+ID_MODEL=${ID_MODEL:-"unknown"}  # Model identifier of the connected device
 
 # Log the udev event with action and model details
 log_message "Udev event: ACTION=$ACTION, ID_MODEL=$ID_MODEL"
@@ -41,7 +41,6 @@ if ! command -v pactl &>/dev/null; then
     log_message "pactl not found. Ensure pulseaudio-utils is installed."
     exit 1
 fi
-
 
 # Check if this is an 'add' action for a USB sound card
 if [[ "$ACTION" == "add" ]]; then
@@ -67,4 +66,5 @@ if [[ "$ACTION" == "add" ]]; then
 fi
 
 # Recreate the merged audio sink
-systemctl --user enable --now update-audio-sinks.service
+log_message "Creating merged audio sinks..."
+sudo systemctl enable --now update-audio-sinks.service
