@@ -38,6 +38,7 @@ disable_service() {
     local service_name=$1
     if systemctl is-active --quiet "$service_name"; then
         echo "Disabling $service_name..."
+        sudo systemctl stop "$service_name"
         sudo systemctl disable --now "$service_name"
         if [ $? -eq 0 ]; then
             echo "$service_name disabled successfully."
