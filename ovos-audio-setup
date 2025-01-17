@@ -90,11 +90,6 @@ case $choice in
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
     fi
 
-    # Disable USB autoconfigure udev rule
-    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
-      echo "Disabling USB autovolume rule."
-      sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
-    fi
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
       echo "Disabling USB merge sinks rule."
       sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
@@ -127,14 +122,15 @@ case $choice in
     fi
 
     # Disable USB autoconfigure udev rule
-    if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
-      echo "Disabling USB autovolume rule."
-      sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
-    fi
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
       echo "Disabling USB merge sinks rule."
       sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
     fi
+
+    echo "Creating udev rule for USB autovolume."
+    echo "$UDEV_USB_AUTO_VOLUME_RULE" | sudo tee "$UDEV_USB_AUTO_VOLUME_RULE_FILE" > /dev/null
+    echo "Udev rule for USB autovolume created: $UDEV_USB_AUTO_VOLUME_RULE_FILE"
+    echo "$UDEV_USB_AUTO_VOLUME_RULE"
 
     # Reload udev rules to apply the new rule immediately
     echo "Reloading udev rules to apply changes..."
