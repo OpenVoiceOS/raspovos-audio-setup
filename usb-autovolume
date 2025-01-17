@@ -54,7 +54,7 @@ if [ -n "$USB_CARDS" ]; then
     log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
     # Detect the control name for the USB soundcard, like 'Master', 'Speaker', etc.
-    CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker\|Headphone\|PCM' | head -n 1 | cut -d"'" -f2)
+    CONTROL_NAME=$(amixer -c "$USB_CARD" scontrols | grep -i 'Master\|Speaker\|Headphone\|Front\|Output\|PCM' | head -n 1 | cut -d"'" -f2)
 
     # If no known control found, log an error
     if [ -z "$CONTROL_NAME" ]; then
