@@ -50,6 +50,7 @@ fi
 log_message "Sinks before action:\n $(pactl list short sinks)"
 
 # Get all sinks, excluding 'auto_combined' and 'auto_null'
+# NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
 SINKS=$(pactl list short sinks | awk '{print $2}' | grep -v 'auto_combined' | grep -v 'auto_null' | tr '\n' ',' | sed 's/,$//')
 NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
 
