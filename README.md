@@ -82,7 +82,25 @@ Check these logs for troubleshooting if you have no audio output.
 
 examples logs you can expect
 ```
-(ovos) ovos@raspOVOS:~ $ cat /tmp/autosink.log 
+(ovos) ovos@raspOVOS:~ $ tail -f /tmp/*.log
+==> /tmp/autosoundcard.log <==
+Fri 17 Jan 06:46:32 WET 2025 - Mark 1 soundcard detected.
+Fri 17 Jan 06:46:33 WET 2025 - ALSA default card set to: 3
+
+==> /tmp/autovolume-usb.log <==
+  Subdevice #6: subdevice #6
+  Subdevice #7: subdevice #7
+card 1: Device [USB Audio Device], device 0: USB Audio [USB Audio]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 2: vc4hdmi [vc4-hdmi], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+Fri Jan 17 10:28:03 WET 2025 - USB audio device detected. Soundcard index: 1
+Fri Jan 17 10:28:03 WET 2025 - Volume set to 85% on card 1, control 'Speaker'
+
+
+==> /tmp/autosink.log  <==
 Fri 17 Jan 06:46:27 WET 2025 - Setting up audio output as combined sinks
 Fri 17 Jan 06:46:28 WET 2025 - auto_null sink exists, still booting? Sleeping for 3 seconds...
 Fri 17 Jan 06:46:31 WET 2025 - Sinks before action:\n 53	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
@@ -98,9 +116,6 @@ Fri 17 Jan 06:46:33 WET 2025 - Sinks after action:\n 53	alsa_output.platform-bcm
 57	alsa_output.platform-soc_sound.stereo-fallback	PipeWire	s32le 2ch 48000Hz	IDLE
 91	auto_combined	PipeWire	float32le 2ch 48000Hz	RUNNING
 
-(ovos) ovos@raspOVOS:~ $ cat /tmp/autosoundcard.log 
-Fri 17 Jan 06:46:32 WET 2025 - Mark 1 soundcard detected.
-Fri 17 Jan 06:46:33 WET 2025 - ALSA default card set to: 3
 ```
 
 ---
