@@ -63,6 +63,8 @@ else
     i2c_platform=""
 fi
 
+log_message "$(aplay -l)"  # Log the detected soundcards
+
 # Autoconfigure default soundcard based on platform
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
@@ -115,4 +117,3 @@ else
     fi
 fi
 
-log_message "$(aplay -l)"  # Log the detected soundcards
