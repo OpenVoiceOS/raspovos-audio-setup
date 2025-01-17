@@ -12,10 +12,6 @@
 #    - If no USB soundcard is found, fallback to onboard BCM soundcard.
 # 4. If no soundcard is detected, log an error message.
 
-# NOTE: udev scripts must not run as root, otherwise it may mess up permissions, eg for pactl
-# to run a command as main rpi user from udev
-#  sudo -u $(getent passwd 1000 | cut -d: -f1) -i sh -c 'echo $USER'
-
 # I2C_DEVICE_FILE and UDEV_SOUNDCARD_RULE_FILE are used for detecting and configuring soundcards automatically.
 I2C_DEVICE_FILE="/etc/OpenVoiceOS/i2c_platform"
 UDEV_SOUNDCARD_RULE_FILE="/etc/udev/rules.d/99-autoconfigure-sound.rules"
@@ -24,14 +20,14 @@ UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 
 # UDEV rule for auto-configuring soundcard when a USB soundcard is added/removed
 # It will trigger the soundcard autoconfigure systemd service instead of running a script directly
-UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="sudo -u $(getent passwd 1000 | cut -d: -f1) -i sh -c /usr/libexec/soundcard_autoconfigure"'
+UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/soundcard_autoconfigure"'
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # This triggers the service for user 1000
 # - set default sink volume for that card
 # - recreate combined sinks for output
-UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="sudo -u $(getent passwd 1000 | cut -d: -f1) -i sh -c /usr/libexec/update-audio-sinks"'
-UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="sudo -u $(getent passwd 1000 | cut -d: -f1) -i sh -c /usr/libexec/usb-autovolume"'
+UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/update-audio-sinks"'
+UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/usb-autovolume"'
 
 # Service names
 COMBINED_SINKS_SERVICE="combine_sinks.service"
