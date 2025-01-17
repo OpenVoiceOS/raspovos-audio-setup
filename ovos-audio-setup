@@ -23,7 +23,6 @@ UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/soundcard_autoconfigure"'
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
-# This triggers the service for user 1000
 # - set default sink volume for that card
 # - recreate combined sinks for output
 UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/update-audio-sinks"'

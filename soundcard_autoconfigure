@@ -8,6 +8,14 @@ MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
 HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
 
+# Check if running as root (EUID == 0)
+if [ "$EUID" -ne 0 ]; then
+    SUDO_CMD="sudo"
+else
+    SUDO_CMD=""
+fi
+
+
 # Set error handling
 set -euo pipefail
 
@@ -29,6 +37,7 @@ log_message() {
     echo "$(date) - $1" >> /tmp/autosoundcard.log
 }
 
+
 # Function to set ALSA defaults for a given card number
 # Arguments:
 #   $1 - The card number to set as default
@@ -37,9 +46,9 @@ set_alsa_defaults() {
     local card_number=$1
     log_message "Configuring ALSA default card"
     # Set the default PCM card
-    echo "defaults.pcm.card $card_number" | sudo tee /etc/asound.conf > /dev/null
+    echo "defaults.pcm.card $card_number" | $SUDO_CMD tee /etc/asound.conf > /dev/null
     # Set the default control card
-    echo "defaults.ctl.card $card_number" | sudo tee -a /etc/asound.conf > /dev/null
+    echo "defaults.ctl.card $card_number" | $SUDO_CMD tee -a /etc/asound.conf > /dev/null
     log_message "ALSA default card set to: $card_number"
 }
 

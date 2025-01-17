@@ -6,10 +6,6 @@
 #
 # Usage: /usr/libexec/update-audio-sinks
 
-# Set the necessary environment variables for PipeWire (or PulseAudio)
-# needed if running as root
-export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
-export XDG_RUNTIME_DIR="/run/user/1000/"
 
 # Switch to the desired user for the next operations
 USERNAME=$(getent passwd 1000 | cut -d: -f1)
@@ -35,12 +31,6 @@ if [[ -n "$USERNAME" ]]; then
         echo "$1"
         echo "$(date) - $1" >> /tmp/autosink.log
     }
-
-    # Ensure pactl is available
-    if ! command -v pactl &>/dev/null; then
-        log_message "pactl not found. Ensure pulseaudio-utils is installed."
-        exit 1
-    fi
 
     log_message "Setting up audio output as combined sinks"
 
