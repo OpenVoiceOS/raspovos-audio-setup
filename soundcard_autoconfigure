@@ -11,6 +11,8 @@ SOUND_SERVER="pipewire"  # TODO: Add support for pulseaudio
 MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
 HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
+GOOGLE_VOICEKIT_V1 = "snd_rpi_googlevoicehat"  # cant be autodetected by ovos-i2csound , user manually enables it
+RESPEAKER_2MIC = "wm8960-soundcard"
 
 # Environment variables for PipeWire (or PulseAudio)
 export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
@@ -138,26 +140,20 @@ get_sink_name_from_card() {
 # Wait for ovos-i2csound to complete setup
 sleep 1
 
-# Read platform information
-if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
-    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
-else
-    log_message "/etc/OpenVoiceOS/i2c_platform not found."
-    i2c_platform=""
-fi
 
-log_message "$(aplay -l)"  # Log detected soundcards
+setup_wm8960_soundcard() {
+    log_message "Respeaker-2mic (wm8960) detected by ovos-i2csound."
+    if aplay -l | grep "$RESPEAKER_2MIC"; then
+        CARD_NUMBER=$(aplay -l | grep "$RESPEAKER_2MIC" | awk '{print $2}' | cut -d':' -f1)
+        log_message "Detected CARD_NUMBER for Respeaker-2mic soundcard: $CARD_NUMBER"
+        set_alsa_defaults "$CARD_NUMBER"
+    else
+        log_message "Error: ovos-i2csound detected Respeaker-2mic but 'aplay -l' could not detect '$RESPEAKER_2MIC'"
+        exit 1
+    fi
+}
 
-# Handle Mark 1-specific warnings
-if echo "$i2c_platform" | grep -q "WM8960"; then
-    # If it's a Mark 1 device, check for arduino boot failure symptoms
-    # WM8960 is wrongly detected by ovos-i2csound if mk1 fails to load
-    log_message "WARNING [Mark1 only]: If this is a Mark 1 device, Arduino may not have booted properly. Power cycle your device until the eyes spin."
-fi
-
-# Autoconfigure default soundcard
-if echo "$i2c_platform" | grep -q "MARK1"; then
-    # If it's a Mark 1 device, configure the Mark 1 soundcard
+setup_mark1_soundcard() {
     log_message "Mark 1 soundcard detected by ovos-i2csound."
     if aplay -l | grep "$MK1_CARD_NAME"; then
         CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
@@ -167,17 +163,31 @@ if echo "$i2c_platform" | grep -q "MARK1"; then
         log_message "Error: ovos-i2csound detected Mark 1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
         exit 1
     fi
-else
+}
+
+setup_googlevoicekitv1_soundcard() {
+    # NOTE: special case, not detected by ovos-i2csound (yet)
+    #  just a placeholder, ovos-i2csound will need to grep boot/config.txt to check if overlay is enabled
+    log_message "GoogleVoiceKit soundcard configured by user"
+    if aplay -l | grep "$GOOGLE_VOICEKIT_V1"; then
+        CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
+        log_message "Detected CARD_NUMBER for GoogleVoiceKit soundcard: $CARD_NUMBER"
+        set_alsa_defaults "$CARD_NUMBER"
+    else
+        log_message "Error: user configured GoogleVoiceKit but 'aplay -l' could not detect '$GOOGLE_VOICEKIT_V1'"
+        exit 1
+    fi
+}
+
+setup_fallback_soundcard() {
     # Check for USB soundcard
     if aplay -l | grep "card" | grep -i "usb"; then
         USB_CARDS=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1)
         if [ -n "$USB_CARDS" ]; then
-            # If multiple USB soundcards are detected, log a warning and pick the last one
             CARD_COUNT=$(echo "$USB_CARDS" | wc -l)
             if [ "$CARD_COUNT" -gt 1 ]; then
                 log_message "Warning: Multiple USB soundcards detected. Using the last detected card."
             fi
-            # Select the last USB soundcard detected
             USB_CARD=$(echo "$USB_CARDS" | tail -n 1)
         else
             USB_CARD=""
@@ -187,36 +197,55 @@ else
     fi
 
     if [ -n "$USB_CARD" ]; then
-        # Set ALSA defaults for the detected USB soundcard
         log_message "USB soundcard detected."
         set_alsa_defaults "$USB_CARD"
     else
-        # Check for any other non-BCM soundcard (prioritize user-installed cards over onboard ones)
         OTHER_CARD=$(aplay -l | grep "card"  | grep -v -i "$HEADPHONES_CARD_NAME" | grep -v -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
         if [ -n "$OTHER_CARD" ]; then
-            # Set ALSA defaults for the user-installed soundcard
             log_message "User-installed soundcard detected."
             set_alsa_defaults "$OTHER_CARD"
         else
-            # Default to onboard BCM soundcard if no other card is found
             BCM_CARD=$(aplay -l | grep "card" | grep -i "$HEADPHONES_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
             if [ -n "$BCM_CARD" ]; then
-                # Set ALSA defaults for the onboard BCM soundcard
                 log_message "Onboard BCM soundcard detected."
                 set_alsa_defaults "$BCM_CARD"
             else
-                # Fall back to HDMI soundcard if no onboard card is found
                 HDMI_CARD=$(aplay -l | grep "card" | grep -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
                 if [ -n "$HDMI_CARD" ]; then
-                    # Set ALSA defaults for the HDMI soundcard
                     log_message "HDMI soundcard detected."
                     set_alsa_defaults "$HDMI_CARD"
                 else
-                    # No suitable soundcard detected, log an error
                     log_message "Error: No suitable soundcard detected."
                 fi
             fi
         fi
     fi
+}
+
+# Main Script
+if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
+    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+else
+    log_message "/etc/OpenVoiceOS/i2c_platform not found."
+    i2c_platform=""
 fi
 
+log_message "$(aplay -l)"  # Log detected soundcards
+
+# Autoconfigure default soundcard
+# TODO - possible values not handled (some might be mic input only)
+#   "SJ201V6" "SJ201V10" "AIYVOICEBONNET", "ADAFRUIT", "RESPEAKER6", "RESPEAKER4"
+case "$i2c_platform" in
+    *WM8960*)
+        # inform user about possible MK1 arduino boot failure
+        # we have no way to know, it will just report as WM8960
+        log_message "WARNING [Mark1 only]: If this is a Mark 1 device, Arduino may not have booted properly. Power cycle your device until the eyes spin."
+        setup_wm8960_soundcard
+        ;;
+    *MARK1*)
+        setup_mark1_soundcard
+        ;;
+    *)
+        setup_fallback_soundcard
+        ;;
+esac
