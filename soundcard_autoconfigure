@@ -141,6 +141,16 @@ get_sink_name_from_card() {
 sleep 1
 
 
+if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
+    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+else
+    log_message "/etc/OpenVoiceOS/i2c_platform not found."
+    i2c_platform=""
+fi
+
+log_message "$(aplay -l)"  # Log detected soundcards
+
+
 setup_wm8960_soundcard() {
     log_message "Respeaker-2mic (wm8960) detected by ovos-i2csound."
     if aplay -l | grep "$RESPEAKER_2MIC"; then
@@ -228,16 +238,6 @@ setup_fallback_soundcard() {
         fi
     fi
 }
-
-# Main Script
-if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
-    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
-else
-    log_message "/etc/OpenVoiceOS/i2c_platform not found."
-    i2c_platform=""
-fi
-
-log_message "$(aplay -l)"  # Log detected soundcards
 
 # Autoconfigure default soundcard
 # TODO - possible values not handled (some might be mic input only)
