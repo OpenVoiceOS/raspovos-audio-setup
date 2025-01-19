@@ -140,7 +140,7 @@ get_sink_name_from_card() {
 # Wait for ovos-i2csound to complete setup
 sleep 1
 
-
+# Check if the file exists before reading it
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
     i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
 else
@@ -168,6 +168,7 @@ setup_mark1_soundcard() {
     if aplay -l | grep "$MK1_CARD_NAME"; then
         CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
         log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
+        # Set ALSA defaults for the detected Mark 1 soundcard
         set_alsa_defaults "$CARD_NUMBER"
     else
         log_message "Error: ovos-i2csound detected Mark 1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
@@ -193,11 +194,13 @@ setup_fallback_soundcard() {
     # Check for USB soundcard
     if aplay -l | grep "card" | grep -i "usb"; then
         USB_CARDS=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1)
+        # If multiple USB soundcards are detected, log a warning and pick the last one
         if [ -n "$USB_CARDS" ]; then
             CARD_COUNT=$(echo "$USB_CARDS" | wc -l)
             if [ "$CARD_COUNT" -gt 1 ]; then
                 log_message "Warning: Multiple USB soundcards detected. Using the last detected card."
             fi
+            # Select the last USB soundcard detected
             USB_CARD=$(echo "$USB_CARDS" | tail -n 1)
         else
             USB_CARD=""
@@ -207,6 +210,7 @@ setup_fallback_soundcard() {
     fi
 
     if [ -n "$USB_CARD" ]; then
+        # Set ALSA defaults for the detected USB soundcard
         log_message "USB soundcard detected."
         set_alsa_defaults "$USB_CARD"
     else
