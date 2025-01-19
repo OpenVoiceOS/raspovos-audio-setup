@@ -11,7 +11,7 @@ SOUND_SERVER="pipewire"  # TODO: Add support for pulseaudio
 MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
 HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
-GOOGLE_VOICEKIT_V1 = "snd_rpi_googlevoicehat"  # cant be autodetected by ovos-i2csound , user manually enables it
+GOOGLE_VOICEKIT_V1="snd_rpi_googlevoicehat"  # cant be autodetected by ovos-i2csound , user manually enables it
 RESPEAKER_2MIC = "wm8960-soundcard"
 
 # Environment variables for PipeWire (or PulseAudio)
