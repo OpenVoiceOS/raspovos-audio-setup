@@ -12,7 +12,7 @@ UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 # It will trigger the soundcard autoconfigure systemd service instead of running a script directly
 UDEV_SOUNDCARD_AUTOSELECT_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", RUN+="/usr/libexec/soundcard-autoconfigure"'
 PIPEWIRE_AUTOSWITCH_CONF="/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d/switch-on-connect.conf"
-PIPEWIRE_ECHOCANCEL_CONF="/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d/echo-cancel.conf"
+PIPEWIRE_ECHOCANCEL_CONF="/home/$OVOS_USER/.config/pipewire/pipewire.conf.d/echo-cancel.conf"
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # - set default sink volume for that card
