@@ -112,17 +112,23 @@ disable_soundcard_autoselect(){
 }
 
 disable_switch_on_connect(){
-    # TODO - pulseaudio modules unload
-    # pipewire
+   if [ "$SOUND_SERVER" == "pulse"]; then
+      pactl unload-module module-switch-on-connect
+      pactl unload-module module-switch-on-port-available
+      # Remove the load-module line from default.pa
+      sed -i '/module-switch-on-connect/d' "/home/$OVOS_USER/.config/pulse/default.pa"
+      sed -i '/module-switch-on-port-available/d' "/home/$OVOS_USER/.config/pulse/default.pa"
+  elif  [ "$SOUND_SERVER" == "pipewire"]; then
     if [ -f "$PIPEWIRE_AUTOSWITCH_CONF" ]; then
         sudo rm "$PIPEWIRE_AUTOSWITCH_CONF"
         echo "Removed soundcard auto-switch pipewire config - $PIPEWIRE_AUTOSWITCH_CONF"
     fi
-    # Alsa
+  else
     if [ -f "$UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE" ]; then
         sudo rm "$UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE"
         echo "Removed udev soundcard rule - $UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE"
     fi
+  fi
 }
 
 disable_echo_cancel(){
