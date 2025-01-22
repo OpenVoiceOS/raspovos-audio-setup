@@ -124,6 +124,7 @@ disable_switch_on_connect(){
     if [ -f "$PIPEWIRE_AUTOSWITCH_CONF" ]; then
         sudo rm "$PIPEWIRE_AUTOSWITCH_CONF"
         echo "Removed soundcard auto-switch pipewire config - $PIPEWIRE_AUTOSWITCH_CONF"
+        pw-cli reload
     fi
   else
     if [ -f "$UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE" ]; then
@@ -144,6 +145,7 @@ disable_echo_cancel(){
       if [ -f "$PIPEWIRE_ECHOCANCEL_CONF" ]; then
         sudo rm "$PIPEWIRE_ECHOCANCEL_CONF"
         echo "Removed echo cancellation pipewire config - $PIPEWIRE_ECHOCANCEL_CONF"
+        pw-cli reload
       fi
   fi
 }
@@ -231,7 +233,7 @@ enable_switch_on_connect(){
             echo "Failed to copy switch-on-connect configuration"
             exit 1
         fi
-        systemctl --user restart pipewire
+        pw-cli reload
         echo "switch-on-connect enabled. if a new soundcard is detected pipewire will automatically switch to it"
     elif [ "$SOUND_SERVER" = "alsa" ]; then
         # Enable autoconfigure rule by creating udev rule
@@ -269,12 +271,13 @@ enable_echo_cancel(){
         echo "load-module module-echo-cancel aec_method=webrtc" >> "/home/$OVOS_USER/.config/pulse/default.pa"
       fi
   elif [ "$SOUND_SERVER" == "alsa" ]; then
-      echo "ERROR: alsa does not support echo cancellation"
+      echo "ERROR: ALSA does not support echo cancellation. Consider using PipeWire or PulseAudio."
   else
+       # Ensure the config directory exists
        mkdir -p "$(dirname "$PIPEWIRE_ECHOCANCEL_CONF")"
        cp "/usr/share/ovos/pipewire/echo-cancel.conf" "$PIPEWIRE_ECHOCANCEL_CONF"
-       systemctl --user restart pipewire
-       echo "echo-cancellation enabled for pipewire"
+       pw-cli reload
+       echo "Echo cancellation enabled for PipeWire."
   fi
 }
 
