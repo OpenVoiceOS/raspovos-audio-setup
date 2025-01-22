@@ -51,7 +51,6 @@ declare -A PATHS=(
     [COMBINED_SINKS_SERVICE_PATH]="./combine_sinks.service"
     [SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH]="./soundcard-autoconfigure"
     [USB_AUTOVOLUME_SCRIPT_PATH]="./usb-autovolume"
-    [OVOS_AUDIO_DIAGNOSTICS_SCRIPT_PATH]="./ovos-audio-diagnostics"
     [OVOS_AUDIO_SETUP_SCRIPT_PATH]="./ovos-audio-setup"
     [UPDATE_AUDIO_SINKS_SCRIPT_PATH]="./combine-sinks"
 )
@@ -73,7 +72,6 @@ sudo systemctl daemon-reload
 # Install additional scripts
 echo "Installing additional scripts..."
 install_file "${PATHS[OVOS_AUDIO_SETUP_SCRIPT_PATH]}" "$BIN_DIR/ovos-audio-setup"
-install_file "${PATHS[OVOS_AUDIO_DIAGNOSTICS_SCRIPT_PATH]}" "$BIN_DIR/ovos-audio-diagnostics"
 install_file "${PATHS[UPDATE_AUDIO_SINKS_SCRIPT_PATH]}" "$LIBEXEC_DIR/combine-sinks"
 install_file "${PATHS[SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH]}" "$LIBEXEC_DIR/soundcard-autoconfigure"
 install_file "${PATHS[USB_AUTOVOLUME_SCRIPT_PATH]}" "$LIBEXEC_DIR/usb-autovolume"
@@ -82,7 +80,6 @@ install_file "${PATHS[USB_AUTOVOLUME_SCRIPT_PATH]}" "$LIBEXEC_DIR/usb-autovolume
 echo "Setting executable permissions for the scripts..."
 set_executable "$BIN_DIR/ovos-audio-setup"
 set_executable "$LIBEXEC_DIR/combine-sinks"
-set_executable "$BIN_DIR/ovos-audio-diagnostics"
 set_executable "$LIBEXEC_DIR/soundcard-autoconfigure"
 set_executable "$LIBEXEC_DIR/usb-autovolume"
 

@@ -62,7 +62,6 @@ disable_service() {
 usage() {
     echo "Usage: $0 [choice]"
     echo "Choices:"
-    echo "0) Run ovos-audio-diagnostics"
     echo "1) Manually select default soundcard"
     echo "2) Enable soundcard-autoselect - select default soundcard (on boot)"
     echo "3) Enable switch-on-connect - if a new soundcard is connected automatically switch to it"
@@ -213,10 +212,6 @@ enable_echo_cancel(){
 
 # TODO - expose missing options
 case $choice in
-0)
-    # Choice 0: run diagnostics script to print useful info
-    /usr/local/bin/ovos-audio-diagnostics
-    ;;
 1)
     # Choice 1: Set default soundcard
     manual_select
