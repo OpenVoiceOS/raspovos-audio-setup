@@ -33,7 +33,7 @@ This repository provides scripts and systemd services to manage audio configurat
 5. **soundcard-autoconfigure**  
    Automatically detects and configures the default soundcard, prioritizing USB soundcards. Falls back to onboard soundcards if no external soundcards are found. (`Mark1 > USB > other > Headphones > HDMI`)
 
-6. **update-audio-sinks**  
+6. **combine-sinks**  
    Manages PulseAudio/PipeWire sinks, specifically for combining audio sinks when multiple devices are detected. 
 
 7. **usb-autovolume**  

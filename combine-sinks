@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# Script: update-audio-sinks
+# Script: combine-sinks
 # Description: Manages PulseAudio/PipeWire sinks by creating a combined sink
 # for multiple audio outputs.
 #
-# Usage: /usr/libexec/update-audio-sinks
+# Usage: /usr/libexec/combine-sinks
 
 # Set the necessary environment variables for PipeWire (or PulseAudio)
 export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"

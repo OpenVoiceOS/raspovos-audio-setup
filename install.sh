@@ -9,7 +9,7 @@ COMBINED_SINKS_SERVICE_PATH="./combine_sinks.service"
 SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH="./soundcard-autoconfigure"
 USB_AUTOVOLUME_SCRIPT_PATH="./usb-autovolume"
 OVOS_AUDIO_SETUP_SCRIPT_PATH="./ovos-audio-setup"
-UPDATE_AUDIO_SINKS_SCRIPT_PATH="./update-audio-sinks"
+UPDATE_AUDIO_SINKS_SCRIPT_PATH="./combine-sinks"
 
 # Target directories
 SYSTEMD_SERVICE_DIR="/etc/systemd/system"
@@ -27,7 +27,7 @@ sudo systemctl daemon-reload
 # Install other scripts to /usr/local/bin and /usr/libexec
 echo "Installing additional scripts..."
 sudo cp "$OVOS_AUDIO_SETUP_SCRIPT_PATH" "/usr/local/bin/ovos-audio-setup"
-sudo cp "$UPDATE_AUDIO_SINKS_SCRIPT_PATH" "/usr/libexec/update-audio-sinks"
+sudo cp "$UPDATE_AUDIO_SINKS_SCRIPT_PATH" "/usr/libexec/combine-sinks"
 sudo cp "$SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH" "/usr/libexec/soundcard-autoconfigure"
 sudo cp "$USB_AUTOVOLUME_SCRIPT_PATH" "/usr/libexec/usb-autovolume"
 
@@ -35,7 +35,7 @@ sudo cp "$USB_AUTOVOLUME_SCRIPT_PATH" "/usr/libexec/usb-autovolume"
 echo "Setting executable permissions for the scripts..."
 
 sudo chmod +x "/usr/local/bin/ovos-audio-setup"
-sudo chmod +x "/usr/libexec/update-audio-sinks"
+sudo chmod +x "/usr/libexec/combine-sinks"
 sudo chmod +x "/usr/libexec/soundcard-autoconfigure"
 sudo chmod +x "/usr/libexec/usb-autovolume"
 

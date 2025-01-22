@@ -25,7 +25,7 @@ UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", RUN+="/usr/libexe
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # - set default sink volume for that card
 # - recreate combined sinks for output
-UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/update-audio-sinks"'
+UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/combine-sinks"'
 UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/usb-autovolume"'
 
 # Service names
