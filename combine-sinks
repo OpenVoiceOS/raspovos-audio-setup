@@ -1,9 +1,7 @@
 #!/bin/bash
 
 # Script: combine-sinks
-# Description: Manages PulseAudio/PipeWire sinks by creating a combined sink
-# for multiple audio outputs.
-#
+# Description: Manages PulseAudio/PipeWire sinks by creating a combined sink for multiple audio outputs.
 # Usage: /usr/libexec/combine-sinks
 
 # Set the necessary environment variables for PipeWire (or PulseAudio)
@@ -13,12 +11,34 @@ export XDG_RUNTIME_DIR="/run/user/1000/"
 # Set error handling
 set -euo pipefail
 
+# Constants
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"  # Get the username of the first non-system user
 
-OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
-MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
-HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
-HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
+# Function to detect the active sound server (PipeWire, PulseAudio, or ALSA)
+# Returns the sound server type as a string
+detect_sound_server() {
+    # Check if PipeWire is installed
+    if command -v pipewire > /dev/null; then
+        echo "pipewire"
+    # Check if PulseAudio is installed
+    elif command -v pulseaudio > /dev/null; then
+        echo "pulse"
+    # Check if ALSA is available
+    elif command -v aplay > /dev/null && command -v amixer > /dev/null; then
+        echo "alsa"
+    else
+        echo "No sound server detected"
+        exit 1
+    fi
+}
 
+# Log function to write to a log file
+# Args:
+#   $1: Message to log
+log_message() {
+    echo "$1"
+    echo "$(date) - $1" >> /tmp/autosink.log
+}
 
 # Function to handle errors
 error_handler() {
@@ -30,16 +50,14 @@ error_handler() {
 
 trap 'error_handler ${LINENO} $?' ERR
 
-# Log function to write to a log file
-# Args:
-#   $1: Message to log
-log_message() {
-    echo "$1"
-    echo "$(date) - $1" >> /tmp/autosink.log
-}
+# Detect sound server
+SOUND_SERVER=$(detect_sound_server)
 
-
-log_message "Setting up audio output as combined sinks"
+# Check if ALSA is in use
+if [ "$SOUND_SERVER" == "alsa" ]; then
+    log_message "ERROR: ALSA does not support combined_sinks. Consider using PipeWire or PulseAudio."
+    exit 1
+fi
 
 if [ "$EUID" -eq 0 ]; then
     log_message "Running as root"
@@ -47,13 +65,11 @@ else
     log_message "Running as user"
 fi
 
-# Wait for the 'auto_null' sink if present (system booting phase)
-if pactl list short sinks | grep -q "auto_null"; then
-    log_message "auto_null sink exists, still booting? Sleeping for 3 seconds..."
-    sleep 3
-fi
+# Constants for specific cards
+MK1_CARD_NAME="snd_rpi_proto"
+HDMI_CARD_NAME="vc4-hdmi"
+HEADPHONES_CARD_NAME="bcm2835"
 
-# Check if the file exists before reading it
 if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
     i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
     log_message "ovos-i2csound detection: $i2c_platform"
@@ -62,67 +78,97 @@ else
     i2c_platform=""
 fi
 
-# log mk1 related warnings just for info and debug
-if echo "$i2c_platform" | grep -q "MARK1"; then
-    # If it's a Mark 1 device, configure the Mark 1 soundcard
-    # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
-    if aplay -l | grep "$MK1_CARD_NAME"; then
-        CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
-        log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
-    else
-        log_message "Error: ovos-i2csound detected Mark1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
+# Function to check and return a list of sinks
+get_sinks() {
+    if [ "$SOUND_SERVER" == "pulse" ]; then
+        pactl list short sinks | awk '{print $2}' | grep -v 'auto_combined' | grep -v 'auto_null' | tr '\n' ',' | sed 's/,$//'
+    elif [ "$SOUND_SERVER" == "pipewire" ]; then
+        echo "TODO"
     fi
-fi
+}
+
+# Check for "auto_null" sink
+wait_for_auto_null() {
+    if [ "$SOUND_SERVER" == "pulse" ] && pactl list short sinks | grep -q "auto_null"; then
+        log_message "auto_null sink exists, still booting? Sleeping for 3 seconds..."
+        sleep 3
+    elif [ "$SOUND_SERVER" == "pipewire" ]; then
+        echo "TODO"
+        sleep 3
+    fi
+}
+
+# Retry getting sinks if none are found
+retry_get_sinks() {
+    local retries=5
+    local sinks=""
+    while [ -z "$sinks" ] && [ "$retries" -gt 0 ]; do
+        log_message "Retrying to find sinks... ($retries retries left)"
+        sleep 1
+        retries=$((retries - 1))
+        sinks=$(get_sinks)
+    done
+    echo "$sinks"
+}
+
+# Main logic to detect the sound server and handle sinks
+log_message "Setting up audio output as combined sinks"
+wait_for_auto_null
 
 # Log the current sinks before any action
-log_message "Sinks before action: $(pactl list short sinks)"
+if [ "$SOUND_SERVER" == "pulse" ]; then
+  log_message "Sinks before action: $(pactl list short sinks)"
+elif [ "$SOUND_SERVER" == "pipewire" ]; then
+  log_message "Sinks before action: $(wpctl status)"
+fi
 
 # Get all sinks, excluding 'auto_combined' and 'auto_null'
 # NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
-SINKS=$(pactl list short sinks | awk '{print $2}' | grep -v 'auto_combined' | grep -v 'auto_null' | tr '\n' ',' | sed 's/,$//')
+SINKS=$(retry_get_sinks)
 NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
 
-# Retry logic if no sinks are found
-RETRIES=5
-while [ "$NUM_SINKS" -eq 0 ] && [ "$RETRIES" -gt 0 ]; do
-    log_message "Retrying to find sinks... ($RETRIES retries left)"
-    sleep 1
-    RETRIES=$((RETRIES - 1))
-    SINKS=$(pactl list short sinks | awk '{print $2}' | grep -v 'auto_combined' | grep -v 'auto_null' | tr '\n' ',' | sed 's/,$//')
-    NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
-done
-
 # Check if auto_combined is present
-if pactl list short sinks | grep -q "auto_combined"; then
-    log_message "auto_combined sink exists"
-else
-    log_message "auto_combined sink missing"
+if [ "$SOUND_SERVER" == "pulse" ]; then
+  if pactl list short sinks | grep -q "auto_combined"; then
+      log_message "auto_combined sink exists"
+  else
+      log_message "auto_combined sink missing"
+  fi
+elif [ "$SOUND_SERVER" == "pipewire" ]; then
+  if wpctl status | grep -q "auto_combined"; then
+      log_message "auto_combined sink exists"
+  else
+      log_message "auto_combined sink missing"
+  fi
 fi
 
 log_message "Total sinks: $NUM_SINKS"
 
 # Create a combined sink if there is more than one sink
 if [ "$NUM_SINKS" -gt 1 ]; then
-    # Unload any existing combined sink module
-    pactl unload-module module-combine-sink 2>/dev/null
-
-    # Create a new combined sink with all available sinks
-    if ! MODULE_ID=$(pactl load-module module-combine-sink slaves="$SINKS" sink_name=auto_combined); then
-        log_message "Failed to create combined sink"
-        exit 1
-    fi
-
-    # Verify the sink exists before setting as default
-    if pactl list short sinks | grep -q "auto_combined"; then
-        pactl set-default-sink auto_combined
-        log_message "Combined sink created with outputs: $SINKS (module ID: $MODULE_ID)"
-    else
-        log_message "Combined sink creation failed"
-        exit 1
+    if [ "$SOUND_SERVER" == "pulse" ]; then
+        pactl unload-module module-combine-sink 2>/dev/null || true
+        if ! MODULE_ID=$(pactl load-module module-combine-sink slaves="$SINKS" sink_name=auto_combined); then
+            log_message "Failed to create combined sink"
+            exit 1
+        fi
+        if pactl list short sinks | grep -q "auto_combined"; then
+            pactl set-default-sink auto_combined
+            log_message "Combined sink created with outputs: $SINKS (module ID: $MODULE_ID)"
+        else
+            log_message "Combined sink creation failed"
+            exit 1
+        fi
+    elif [ "$SOUND_SERVER" == "pipewire" ]; then
+        echo "TODO"
     fi
 else
     log_message "No sinks found to combine"
 fi
 
 # Log the current sinks after action
-log_message "Sinks after action: $(pactl list short sinks)"
+if [ "$SOUND_SERVER" == "pulse" ]; then
+    log_message "Sinks after action: $(pactl list short sinks)"
+elif [ "$SOUND_SERVER" == "pipewire" ]; then
+    log_message "Sinks after action: $(wpctl status)"
+fi
