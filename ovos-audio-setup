@@ -12,6 +12,7 @@ UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 # It will trigger the soundcard autoconfigure systemd service instead of running a script directly
 UDEV_SOUNDCARD_AUTOSELECT_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", RUN+="/usr/libexec/soundcard-autoconfigure"'
 PIPEWIRE_AUTOSWITCH_CONF="/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d/switch-on-connect.conf"
+PIPEWIRE_ECHOCANCEL_CONF="/home/$OVOS_USER/.config/pipewire/pipewire.conf.d/echo-cancel.conf"
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # - set default sink volume for that card
@@ -78,8 +79,9 @@ usage() {
     echo "3) Enable switch-on-connect - if a new soundcard is connected automatically switch to it"
     echo "4) Enable USB auto-volume - set default volume for USB cards on connection"
     echo "5) Enable combine-sinks - output audio trough all outputs at once"
-    echo "6) Revert changes - you will be prompted to interactively revert the above actions"
-    echo "7) Exit"
+    echo "6) Enable echo cancellation"
+    echo "7) Revert changes - you will be prompted to interactively revert the above actions"
+    echo "8) Exit"
 }
 
 # Get the choice from the command-line argument or prompt the user
@@ -122,6 +124,7 @@ disable_switch_on_connect(){
     if [ -f "$PIPEWIRE_AUTOSWITCH_CONF" ]; then
         sudo rm "$PIPEWIRE_AUTOSWITCH_CONF"
         echo "Removed soundcard auto-switch pipewire config - $PIPEWIRE_AUTOSWITCH_CONF"
+        pw-cli reload
     fi
   else
     if [ -f "$UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE" ]; then
@@ -132,7 +135,19 @@ disable_switch_on_connect(){
 }
 
 disable_echo_cancel(){
-  echo "NOT IMPLEMENTED - just a placeholder"
+  if [ "$SOUND_SERVER" == "pulse"]; then
+      pactl unload-module module-echo-cancel
+      # Remove the load-module line from default.pa
+      sed -i '/load-module module-echo-cancel aec_method=webrtc/d' "/home/$OVOS_USER/.config/pulse/default.pa"
+  elif [ "$SOUND_SERVER" == "alsa"]; then
+      echo "ERROR: alsa does not support echo cancellation"
+  else
+      if [ -f "$PIPEWIRE_ECHOCANCEL_CONF" ]; then
+        sudo rm "$PIPEWIRE_ECHOCANCEL_CONF"
+        echo "Removed echo cancellation pipewire config - $PIPEWIRE_ECHOCANCEL_CONF"
+        pw-cli reload
+      fi
+  fi
 }
 
 reset_alsa_config(){
@@ -218,7 +233,7 @@ enable_switch_on_connect(){
             echo "Failed to copy switch-on-connect configuration"
             exit 1
         fi
-        systemctl --user restart pipewire
+        pw-cli reload
         echo "switch-on-connect enabled. if a new soundcard is detected pipewire will automatically switch to it"
     elif [ "$SOUND_SERVER" = "alsa" ]; then
         # Enable autoconfigure rule by creating udev rule
@@ -245,7 +260,25 @@ enable_soundcard_autoselect(){
 }
 
 enable_echo_cancel(){
-  echo "NOT IMPLEMENTED - just a placeholder"
+  if [ "$SOUND_SERVER" == "pulse" ]; then
+      pactl unload-module module-echo-cancel
+      pactl load-module module-echo-cancel aec_method=webrtc source_name=echocancel sink_name=echocancel_sink
+      pacmd set-default-source echocancel
+      pacmd set-default-sink echocancel_sink
+      # make it happen on boot
+      mkdir -p "/home/$OVOS_USER/.config/pulse"
+      if ! grep -q "load-module module-echo-cancel aec_method=webrtc" "/home/$OVOS_USER/.config/pulse/default.pa"; then
+        echo "load-module module-echo-cancel aec_method=webrtc" >> "/home/$OVOS_USER/.config/pulse/default.pa"
+      fi
+  elif [ "$SOUND_SERVER" == "alsa" ]; then
+      echo "ERROR: ALSA does not support echo cancellation. Consider using PipeWire or PulseAudio."
+  else
+       # Ensure the config directory exists
+       mkdir -p "$(dirname "$PIPEWIRE_ECHOCANCEL_CONF")"
+       cp "/usr/share/ovos/pipewire/echo-cancel.conf" "$PIPEWIRE_ECHOCANCEL_CONF"
+       pw-cli reload
+       echo "Echo cancellation enabled for PipeWire."
+  fi
 }
 
 #############################
@@ -274,7 +307,12 @@ case $choice in
     disable_soundcard_autoselect
     enable_combine_sinks
     ;;
+
 6)
+    # Choice 6: Enable echo cancellation
+    enable_echo_cancel
+    ;;
+7)
     # Choice 6: Reset everything (clean state)
 
     # Prompt for each action
@@ -298,10 +336,14 @@ case $choice in
         disable_usb_autovol
     fi
 
+    if prompt_user "Do you want to disable echo cancellation?"; then
+        disable_echo_cancel
+    fi
+
     echo "Audio configuration reset process completed."
 
     ;;
-7)
+8)
     # Exit
     echo "Exiting audio setup."
     ;;
