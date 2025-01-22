@@ -131,11 +131,11 @@ disable_echo_cancel(){
 
 reset_alsa_config(){
     rm /home/$OVOS_USER/.asoundrc
-    if [ $SOUND_SERVER != "alsa"]; then
+    if [ "$SOUND_SERVER" != "alsa" ]; then
       echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
       chmod 644 /home/$OVOS_USER/.asoundrc
     else
-      if [ -f /home/$OVOS_USER/.asoundrc.bak]; then
+      if [ -f "/home/$OVOS_USER/.asoundrc.bak" ]; then
           mv /home/$OVOS_USER/.asoundrc.bak /home/$OVOS_USER/.asoundrc
       fi
     fi

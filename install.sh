@@ -103,7 +103,7 @@ if [[ "$SOUND_SERVER" != "pipewire" ]]; then
                 exit 1
             fi
             # backup existing config
-            if [ -f /home/$OVOS_USER/.asoundrc]; then
+            if [ -f "/home/$OVOS_USER/.asoundrc" ]; then
                 mv /home/$OVOS_USER/.asoundrc /home/$OVOS_USER/.asoundrc.bak
             fi
             echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
