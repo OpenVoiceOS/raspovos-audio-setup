@@ -117,6 +117,7 @@ if [[ "$SOUND_SERVER" != "pipewire" ]]; then
                 echo "Failed to set permissions on .asoundrc"
                 exit 1
             fi
+            sudo chown $OVOS_USER:$OVOS_USER "/home/$OVOS_USER/.asoundrc"
             echo "PipeWire installed successfully."
             ;;
         *)
