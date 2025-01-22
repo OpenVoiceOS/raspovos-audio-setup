@@ -4,6 +4,10 @@
 # This script installs the necessary services, rules, and scripts for configuring sound on raspOVOS.
 
 OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+if [ -z "$OVOS_USER" ]; then
+    echo "Error: Could not find user with UID 1000"
+    exit 1
+fi
 
 
 # Detects the sound server currently in use on the system.
@@ -47,12 +51,12 @@ SOUND_SERVER=$(detect_sound_server)
 
 # Define paths for the services and scripts
 declare -A PATHS=(
-    [AUTOCONFIGURE_SERVICE_PATH]="./autoconfigure_soundcard.service"
-    [COMBINED_SINKS_SERVICE_PATH]="./combine_sinks.service"
-    [SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH]="./soundcard-autoconfigure"
-    [USB_AUTOVOLUME_SCRIPT_PATH]="./usb-autovolume"
-    [OVOS_AUDIO_SETUP_SCRIPT_PATH]="./ovos-audio-setup"
-    [UPDATE_AUDIO_SINKS_SCRIPT_PATH]="./combine-sinks"
+    [AUTOCONFIGURE_SERVICE_PATH]="$(dirname "$(readlink -f "$0")")/autoconfigure_soundcard.service"
+    [COMBINED_SINKS_SERVICE_PATH]="$(dirname "$(readlink -f "$0")")/combine_sinks.service"
+    [SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/soundcard-autoconfigure"
+    [USB_AUTOVOLUME_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/usb-autovolume"
+    [OVOS_AUDIO_SETUP_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/ovos-audio-setup"
+    [UPDATE_AUDIO_SINKS_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/combine-sinks"
 )
 
 # Target directories for installation

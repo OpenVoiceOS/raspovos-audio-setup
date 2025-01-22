@@ -204,14 +204,17 @@ enable_combine_sinks(){
 
 enable_switch_on_connect(){
     if [ "$SOUND_SERVER" = "pipewire" ]; then
-        mkdir -p "/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d"
-        if ! cp "./switch-on-connect.conf" "$PIPEWIRE_AUTOSWITCH_CONF"; then
+        if ! mkdir -p "/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d"; then
+            echo "Failed to create pipewire config directory"
+            exit 1
+        fi
+        if ! cp "/usr/share/ovos/pipewire/switch-on-connect.conf" "$PIPEWIRE_AUTOSWITCH_CONF"; then
             echo "Failed to copy switch-on-connect configuration"
             exit 1
         fi
         systemctl --user restart pipewire
         echo "switch-on-connect enabled. if a new soundcard is detected pipewire will automatically switch to it"
-    elif  [ $SOUND_SERVER == "alsa" ]; then
+    elif [ "$SOUND_SERVER" = "alsa" ]; then
         # Enable autoconfigure rule by creating udev rule
         echo "Creating udev rule for autoconfiguration of new soundcards."
         echo "$UDEV_SOUNDCARD_AUTOSELECT_RULE" | sudo tee "$UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE" > /dev/null
@@ -292,7 +295,7 @@ case $choice in
     echo "Audio configuration reset process completed."
 
     ;;
-5)
+7)
     # Exit
     echo "Exiting audio setup."
     ;;
