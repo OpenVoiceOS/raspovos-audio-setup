@@ -156,7 +156,7 @@ echo ""
 echo "# Available audio outputs:"
 ls_sinks
 
-if $SOUND_SERVER == "alsa"; then
+if [ "$SOUND_SERVER" == "alsa" ]; then
     # no sinks in alsa TODO print .asoundrc ? check default card?
     exit 0
 fi
