@@ -41,6 +41,17 @@ detect_sound_server() {
 
 SOUND_SERVER=$(detect_sound_server)
 
+# Function to prompt for confirmation
+prompt_user() {
+    while true; do
+        read -p "$1 (y/n): " choice
+        case "$choice" in
+            y|Y ) return 0;;  # User chose yes
+            n|N ) return 1;;  # User chose no
+            * ) echo "Please answer y or n.";;  # Invalid input
+        esac
+    done
+}
 
 # Function to disable conflicting services
 # Disables a service if it is active.
@@ -86,11 +97,11 @@ disable_usb_autovol(){
     fi
 }
 
-disable_merge_sinks(){
+disable_combine_sinks(){
     disable_service "$COMBINED_SINKS_SERVICE"
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
         sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
-        echo "Removed udev USB merge sinks rule"
+        echo "Removed udev USB combine_sinks rule"
     fi
 }
 
@@ -145,8 +156,20 @@ manual_select(){
     echo "defaults.ctl.card $user_card" >> "/home/$OVOS_USER/.asoundrc"
     chmod 644 /home/$OVOS_USER/.asoundrc
 
-    # TODO - prompt about disabling merge sinks and autoconfigure
-    #   user likely wants change to stick
+   # Check if the auto-configure service is active
+    if systemctl is-active --quiet "$AUTOCONFIGURE_SERVICE"; then
+        # Prompt user about disabling sound card auto-select
+        if prompt_user "Do you want to disable sound card auto-select?"; then
+            disable_soundcard_autoselect
+        fi
+    fi
+
+    if systemctl is-active --quiet "$COMBINED_SINKS_SERVICE"; then
+      # Prompt user about disabling combine_sinks
+      if prompt_user "Do you want to disable combined-sinks?"; then
+          disable_combine_sinks
+      fi
+    fi
 
 }
 
@@ -210,7 +233,6 @@ enable_echo_cancel(){
 #############################
 # Main logic based on user's choice
 
-# TODO - expose missing options
 case $choice in
 1)
     # Choice 1: Set default soundcard
@@ -218,7 +240,7 @@ case $choice in
     ;;
 2)
     # Choice 2: autoselect default soundcard
-    disable_merge_sinks
+    disable_combine_sinks
     enable_soundcard_autoselect
     ;;
 3)
@@ -236,13 +258,30 @@ case $choice in
     ;;
 6)
     # Choice 6: Reset everything (clean state)
-    echo "Resetting audio configuration..."
-    # TODO make interactive
-    reset_alsa_config
-    disable_switch_on_connect
-    disable_soundcard_autoselect
-    disable_merge_sinks
-    disable_usb_autovol
+
+    # Prompt for each action
+    if prompt_user "Do you want to reset ALSA configuration?"; then
+        reset_alsa_config
+    fi
+
+    if prompt_user "Do you want to disable switch on connect?"; then
+        disable_switch_on_connect
+    fi
+
+    if prompt_user "Do you want to disable soundcard auto-select?"; then
+        disable_soundcard_autoselect
+    fi
+
+    if prompt_user "Do you want to disable combine_sinks?"; then
+        disable_combine_sinks
+    fi
+
+    if prompt_user "Do you want to disable USB auto volume?"; then
+        disable_usb_autovol
+    fi
+
+    echo "Audio configuration reset process completed."
+
     ;;
 5)
     # Exit
