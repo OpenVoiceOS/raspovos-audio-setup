@@ -6,7 +6,7 @@ After=systemd-modules-load.service
 [Service]
 Type=oneshot
 User=1000
-ExecStart=/usr/libexec/soundcard_autoconfigure
+ExecStart=/usr/libexec/soundcard-autoconfigure
 RemainAfterExit=yes
 Restart=on-failure
 RestartSec=10

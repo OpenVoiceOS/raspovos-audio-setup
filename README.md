@@ -30,7 +30,7 @@ This repository provides scripts and systemd services to manage audio configurat
 4. **ovos-audio-setup**  
    Main script that provides an interactive setup menu to configure the default soundcard, enable automatic soundcard configuration, enable combined audio sinks, or revert all changes.
 
-5. **soundcard_autoconfigure**  
+5. **soundcard-autoconfigure**  
    Automatically detects and configures the default soundcard, prioritizing USB soundcards. Falls back to onboard soundcards if no external soundcards are found. (`Mark1 > USB > other > Headphones > HDMI`)
 
 6. **update-audio-sinks**  
