@@ -92,10 +92,16 @@ if [[ "$SOUND_SERVER" != "pipewire" ]]; then
         [yY][eE][sS]|[yY])
             if [[ "$SOUND_SERVER" != "alsa" ]]; then
               echo "Uninstalling pulseaudio..."
-              apt-get purge -y pulseaudio
+              if ! apt-get purge -y pulseaudio; then
+                  echo "Failed to uninstall pulseaudio"
+                  exit 1
+              fi
             fi
             echo "Installing PipeWire..."
-            apt-get install -y --no-install-recommends pipewire pipewire-alsa wireplumber
+            if ! apt-get install -y --no-install-recommends pipewire pipewire-alsa wireplumber; then
+                echo "Failed to install PipeWire"
+                exit 1
+            fi
             echo "PipeWire installed successfully."
             ;;
         *)
