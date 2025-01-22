@@ -21,11 +21,12 @@ UDEV_USB_MERGE_SINKS_FILE="/etc/udev/rules.d/99-usb-mergesinks.rules"
 # UDEV rule for auto-configuring soundcard when a USB soundcard is added/removed
 # It will trigger the soundcard autoconfigure systemd service instead of running a script directly
 UDEV_SOUNDCARD_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", RUN+="/usr/libexec/soundcard-autoconfigure"'
+PIPEWIRE_AUTOSWITCH_CONF="/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d/switch-on-connect.conf"
 
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # - set default sink volume for that card
 # - recreate combined sinks for output
-UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/combine-sinks"'
+UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/update-audio-sinks"'
 UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/usb-autovolume"'
 
 # Service names
@@ -33,7 +34,25 @@ COMBINED_SINKS_SERVICE="combine_sinks.service"
 AUTOCONFIGURE_SERVICE="autoconfigure_soundcard.service"
 
 OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
-SOUND_SERVER="pipewire"  # TODO support pulseaudio maybe
+
+detect_sound_server() {
+    # Check if PipeWire is installed
+    if command -v pipewire > /dev/null; then
+        echo "pipewire"
+    # Check if PulseAudio is installed
+    elif command -v pulseaudio > /dev/null; then
+        echo "pulse"
+    # Check if ALSA is available
+    elif command -v aplay > /dev/null && command -v amixer > /dev/null; then
+        echo "alsa"
+    else
+        echo "No sound server detected"
+        exit 1
+    fi
+}
+
+SOUND_SERVER=$(detect_sound_server)
+
 
 # Function to disable conflicting services
 # Disables a service if it is active.
@@ -57,9 +76,8 @@ usage() {
     echo "Choices:"
     echo "  1 - Set default soundcard"
     echo "  2 - Autoconfigure default soundcard"
-    echo "  3 - Enable combined audio sinks"
-    echo "  4 - Revert changes"
-    echo "  5 - Exit"
+    echo "  3 - Revert changes"
+    echo "  4 - Exit"
     exit 1
 }
 
@@ -67,12 +85,16 @@ usage() {
 if [ $# -gt 0 ]; then
     choice=$1
 else
+  # TODO - refactor script to work like this
     echo "Audio Setup Options:"
+    echo "0) Run ovos-audio-diagnostics"
     echo "1) Manually select default soundcard"
-    echo "2) Autoconfigure default soundcard"
-    echo "3) Enable combined audio sinks"
-    echo "4) Revert changes"
-    echo "5) Exit"
+    echo "2) Enable autoconfigure_soundcard.service - auto adjust to soundcard changes (on boot)"
+    echo "3) Enable ovos_i2csound.service - auto detect and setup hardware drivers for common hats (on boot)"
+    echo "4) Enable USB auto-volume - set default volume for USB cards on connection"
+    echo "5) Enable switch-on-connect - if a new soundcard is connected automatically switch to it"
+    echo "6) Revert changes - you will be prompted to interactively revert the above actions"
+    echo "7) Exit"
     read -p "Choose an option: " choice
 fi
 
@@ -126,18 +148,26 @@ case $choice in
         echo "Error: Failed to enable $AUTOCONFIGURE_SERVICE."
     fi
 
-    # Enable autoconfigure rule by creating udev rule
-    echo "Creating udev rule for autoconfiguration of new soundcards."
-    echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
-    echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
-    echo "$UDEV_SOUNDCARD_RULE"
+    # TODO - split into own option
+     if [ $SOUND_SERVER == "pipewire" ]; then
+        cp ./switch-on-connect.conf $PIPEWIRE_AUTOSWITCH_CONF
+        echo "switch-on-connect enabled. if a new soundcard is detected pipewire will automatically switch to it"
+    else if  [ $SOUND_SERVER == "alsa" ]; then
+        # Enable autoconfigure rule by creating udev rule
+        echo "Creating udev rule for autoconfiguration of new soundcards."
+        echo "$UDEV_SOUNDCARD_RULE" | sudo tee "$UDEV_SOUNDCARD_RULE_FILE" > /dev/null
+        echo "Udev rule created: $UDEV_SOUNDCARD_RULE_FILE"
+        echo "$UDEV_SOUNDCARD_RULE"
+    else
+        echo "Error: switch-on-connect not implemented for pulseaudio"  # TODO pulse
+    fi
 
-    # Disable USB autoconfigure udev rule
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
       echo "Disabling USB merge sinks rule. $UDEV_USB_MERGE_SINKS_FILE"
       sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
     fi
 
+    # TODO - split into own option
     echo "Creating udev rule for USB autovolume."
     echo "$UDEV_USB_AUTO_VOLUME_RULE" | sudo tee "$UDEV_USB_AUTO_VOLUME_RULE_FILE" > /dev/null
     echo "Udev rule for USB autovolume created: $UDEV_USB_AUTO_VOLUME_RULE_FILE"
@@ -194,10 +224,15 @@ case $choice in
     echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
     chmod 644 /home/$OVOS_USER/.asoundrc
 
+    if [ -f "$PIPEWIRE_AUTOSWITCH_CONF" ]; then
+        sudo rm "$PIPEWIRE_AUTOSWITCH_CONF"
+        echo "Removed soundcard auto-switch pipewire config - $PIPEWIRE_AUTOSWITCH_CONF"
+    fi
+
     # Remove udev rules related to soundcard configuration
     if [ -f "$UDEV_SOUNDCARD_RULE_FILE" ]; then
         sudo rm "$UDEV_SOUNDCARD_RULE_FILE"
-        echo "Removed udev soundcard rule"
+        echo "Removed udev soundcard rule - $UDEV_SOUNDCARD_RULE_FILE"
     fi
     if [ -f "$UDEV_USB_MERGE_SINKS_FILE" ]; then
         sudo rm "$UDEV_USB_MERGE_SINKS_FILE"
@@ -205,7 +240,7 @@ case $choice in
     fi
     if [ -f "$UDEV_USB_AUTO_VOLUME_RULE_FILE" ]; then
         sudo rm "$UDEV_USB_AUTO_VOLUME_RULE_FILE"
-        echo "Removed udev USB auto volume rule"
+        echo "Removed udev USB auto volume rule - $UDEV_USB_AUTO_VOLUME_RULE_FILE"
     fi
 
     # Reload udev rules after cleanup
