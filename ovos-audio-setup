@@ -130,7 +130,12 @@ disable_echo_cancel(){
 }
 
 reset_alsa_config(){
-    rm /home/$OVOS_USER/.asoundrc
+    if [ -f "/home/$OVOS_USER/.asoundrc" ]; then
+        if ! rm "/home/$OVOS_USER/.asoundrc"; then
+            echo "Failed to remove .asoundrc"
+            exit 1
+        fi
+    fi
     if [ "$SOUND_SERVER" != "alsa" ]; then
       echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
       chmod 644 /home/$OVOS_USER/.asoundrc
@@ -198,8 +203,11 @@ enable_combine_sinks(){
 }
 
 enable_switch_on_connect(){
-    if [ $SOUND_SERVER == "pipewire" ]; then
-        cp ./switch-on-connect.conf $PIPEWIRE_AUTOSWITCH_CONF
+    if [ "$SOUND_SERVER" = "pipewire" ]; then
+        if ! cp "./switch-on-connect.conf" "$PIPEWIRE_AUTOSWITCH_CONF"; then
+            echo "Failed to copy switch-on-connect configuration"
+            exit 1
+        fi
         systemctl --user restart pipewire
         echo "switch-on-connect enabled. if a new soundcard is detected pipewire will automatically switch to it"
     elif  [ $SOUND_SERVER == "alsa" ]; then

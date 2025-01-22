@@ -104,10 +104,19 @@ if [[ "$SOUND_SERVER" != "pipewire" ]]; then
             fi
             # backup existing config
             if [ -f "/home/$OVOS_USER/.asoundrc" ]; then
-                mv /home/$OVOS_USER/.asoundrc /home/$OVOS_USER/.asoundrc.bak
+                if ! mv "/home/$OVOS_USER/.asoundrc" "/home/$OVOS_USER/.asoundrc.bak"; then
+                    echo "Failed to backup .asoundrc"
+                    exit 1
+                fi
             fi
-            echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
-            chmod 644 /home/$OVOS_USER/.asoundrc
+            if ! echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > "/home/$OVOS_USER/.asoundrc"; then
+                echo "Failed to create .asoundrc"
+                exit 1
+            fi
+            if ! chmod 644 "/home/$OVOS_USER/.asoundrc"; then
+                echo "Failed to set permissions on .asoundrc"
+                exit 1
+            fi
             echo "PipeWire installed successfully."
             ;;
         *)
