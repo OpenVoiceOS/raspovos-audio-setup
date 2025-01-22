@@ -3,6 +3,14 @@
 # This script automatically configures the default soundcard based on the detected devices.
 # It runs after ovos-i2csound and when a USB soundcard is connected or removed.
 
+# Main Logic
+# 1. If an /etc/OpenVoiceOS/i2c_platform exists, check the detected platform.
+# 2. If a soundcard matching the platform is detected, set it as the ALSA default card.
+# 3. If no matching soundcard is detected:
+#    - Check for USB soundcards and set the first one detected as the ALSA default card.
+#    - If no USB soundcard is found, fallback to onboard BCM soundcard.
+# 4. If no soundcard is detected, log an error message.
+
 # Constants
 OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"  # Get the username of the first non-system user
 
