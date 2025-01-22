@@ -258,23 +258,24 @@ enable_soundcard_autoselect(){
 }
 
 enable_echo_cancel(){
-  if [ "$SOUND_SERVER" == "pulse"]; then
+  if [ "$SOUND_SERVER" == "pulse" ]; then
       pactl unload-module module-echo-cancel
       pactl load-module module-echo-cancel aec_method=webrtc source_name=echocancel sink_name=echocancel_sink
       pacmd set-default-source echocancel
       pacmd set-default-sink echocancel_sink
       # make it happen on boot
+      mkdir -p "/home/$OVOS_USER/.config/pulse"
       if ! grep -q "load-module module-echo-cancel aec_method=webrtc" "/home/$OVOS_USER/.config/pulse/default.pa"; then
         echo "load-module module-echo-cancel aec_method=webrtc" >> "/home/$OVOS_USER/.config/pulse/default.pa"
       fi
-  elif [ "$SOUND_SERVER" == "alsa"]; then
+  elif [ "$SOUND_SERVER" == "alsa" ]; then
       echo "ERROR: alsa does not support echo cancellation"
   else
-       cp ./echo-cancel.conf $PIPEWIRE_PIPEWIRE_ECHOCANCEL_CONF
+       mkdir -p "$(dirname "$PIPEWIRE_ECHOCANCEL_CONF")"
+       cp "/usr/share/ovos/pipewire/echo-cancel.conf" "$PIPEWIRE_ECHOCANCEL_CONF"
        systemctl --user restart pipewire
        echo "echo-cancellation enabled for pipewire"
   fi
-
 }
 
 #############################
@@ -339,7 +340,7 @@ case $choice in
     echo "Audio configuration reset process completed."
 
     ;;
-5)
+8)
     # Exit
     echo "Exiting audio setup."
     ;;
