@@ -1,5 +1,7 @@
 #!/bin/bash
 
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+
 # I2C_DEVICE_FILE and UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE are used for detecting and configuring soundcards automatically.
 I2C_DEVICE_FILE="/etc/OpenVoiceOS/i2c_platform"
 UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE="/etc/udev/rules.d/99-autoconfigure-sound.rules"
@@ -14,14 +16,12 @@ PIPEWIRE_AUTOSWITCH_CONF="/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.
 # UDEV rule for auto setting USB soundcard volume and recreating combined sinks
 # - set default sink volume for that card
 # - recreate combined sinks for output
-UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/update-audio-sinks"'
+UDEV_USB_MERGE_SINKS_RULE='ACTION=="add|remove", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/combine-sinks"'
 UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb", RUN+="/usr/libexec/usb-autovolume"'
 
 # Service names
 COMBINED_SINKS_SERVICE="combine_sinks.service"
 AUTOCONFIGURE_SERVICE="autoconfigure_soundcard.service"
-
-OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
 
 detect_sound_server() {
     # Check if PipeWire is installed
@@ -120,8 +120,15 @@ disable_echo_cancel(){
 }
 
 reset_alsa_config(){
-    echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
-    chmod 644 /home/$OVOS_USER/.asoundrc
+    rm /home/$OVOS_USER/.asoundrc
+    if [ $SOUND_SERVER != "alsa"]; then
+      echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
+      chmod 644 /home/$OVOS_USER/.asoundrc
+    else
+      if [ -f /home/$OVOS_USER/.asoundrc.bak]; then
+          mv /home/$OVOS_USER/.asoundrc.bak /home/$OVOS_USER/.asoundrc
+      fi
+    fi
 }
 
 
@@ -152,9 +159,6 @@ enable_usb_autovol(){
 }
 
 enable_combine_sinks(){
-   echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
-    chmod 644 /home/$OVOS_USER/.asoundrc
-
     echo "Enabling $COMBINED_SINKS_SERVICE..."
     sudo systemctl enable --now "$COMBINED_SINKS_SERVICE"
     if [ $? -eq 0 ]; then
@@ -238,7 +242,7 @@ case $choice in
 6)
     # Choice 6: Reset everything (clean state)
     echo "Resetting audio configuration..."
-    # TODO interactive
+    # TODO make interactive
     reset_alsa_config
     disable_switch_on_connect
     disable_soundcard_autoselect

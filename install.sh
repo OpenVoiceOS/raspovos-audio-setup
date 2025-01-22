@@ -3,6 +3,9 @@
 # install.sh
 # This script installs the necessary services, rules, and scripts for configuring sound on raspOVOS.
 
+OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+
+
 # Detects the sound server currently in use on the system.
 # Returns the name of the sound server (pipewire, pulse, alsa) or exits with an error if none is found.
 detect_sound_server() {
@@ -102,6 +105,12 @@ if [[ "$SOUND_SERVER" != "pipewire" ]]; then
                 echo "Failed to install PipeWire"
                 exit 1
             fi
+            # backup existing config
+            if [ -f /home/$OVOS_USER/.asoundrc]; then
+                mv /home/$OVOS_USER/.asoundrc /home/$OVOS_USER/.asoundrc.bak
+            fi
+            echo -e "pcm.!default $SOUND_SERVER\nctl.!default $SOUND_SERVER" > /home/$OVOS_USER/.asoundrc
+            chmod 644 /home/$OVOS_USER/.asoundrc
             echo "PipeWire installed successfully."
             ;;
         *)
