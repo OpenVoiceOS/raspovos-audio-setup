@@ -6,11 +6,12 @@ This repository provides scripts and systemd services to manage audio configurat
 
 ---
 
-## Features:
-- Auto-detect and configure default soundcards, prioritizing external Hats and USB devices.
-- Combine multiple audio sinks for seamless playback across devices.
-- Revert all audio-related configurations to the default state with a single command.
-- Ensure compatibility by managing mutually exclusive services (`autoconfigure_soundcard.service` and `combine_sinks.service`).
+## Goals
+
+- if raspOVOS hardware changes audio should continue working, this could mean plugging a USB soundcard in a live system or swapping the sd card to different hardware completely
+- expose complex audio setups in user friendly ways (eg. echo cancellation)
+- support various sound servers (`alsa`, `pipewire` or `pulseaudio`)
+- work in non-OVOS raspberry pi images
 
 > 💡 **Tip:** Want automatic hardware detection and driver setup? Check out [ovos-i2csound](https://github.com/OpenVoiceOS/ovos-i2csound), designed for Raspberry Pi-specific hardware like Mycroft Mark 1 and Respeaker.
 
