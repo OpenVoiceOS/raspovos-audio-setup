@@ -332,6 +332,10 @@ case $choice in
         disable_usb_autovol
     fi
 
+    if prompt_user "Do you want to disable echo cancellation?"; then
+        disable_echo_cancel
+    fi
+
     echo "Audio configuration reset process completed."
 
     ;;
