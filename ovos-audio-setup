@@ -204,6 +204,7 @@ enable_combine_sinks(){
 
 enable_switch_on_connect(){
     if [ "$SOUND_SERVER" = "pipewire" ]; then
+        mkdir -p "/home/$OVOS_USER/.config/pipewire/pipewire-pulse.conf.d"
         if ! cp "./switch-on-connect.conf" "$PIPEWIRE_AUTOSWITCH_CONF"; then
             echo "Failed to copy switch-on-connect configuration"
             exit 1
