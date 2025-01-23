@@ -53,10 +53,49 @@ trap 'error_handler ${LINENO} $?' ERR
 # Detect sound server
 SOUND_SERVER=$(detect_sound_server)
 
+# Function to create the combined ALSA virtual device
+create_combined_alsa_device() {
+    local combined_device_name="auto_combined"
+
+    # Detect all available ALSA devices
+    local devices=$(aplay -l | awk '/card/ {print $2}' | tr -d ':' | tr '\n' ',' | sed 's/,$//')
+    if [ -z "$devices" ]; then
+        log_message "No ALSA devices found."
+        exit 1
+    fi
+
+    # Create a virtual combined ALSA device by modifying the asound.conf file
+    local card_entries=""
+    local card_index=0
+
+    for device in $(echo "$devices" | tr ',' '\n'); do
+        # We create a slave entry for each ALSA device found
+        card_entries+="slaves.${card_index}.pcm \"hw:${device}\"\n"
+        card_entries+="bindings.${card_index} 0\n"  # Map the channels
+        ((card_index++))
+    done
+
+    cat <<EOL > "/home/$OVOS_USER/.asoundrc"
+pcm.!default {
+    type multi
+    ${card_entries}
+}
+
+ctl.!default {
+    type hw
+    card 0
+}
+EOL
+}
+
+
 # Check if ALSA is in use
 if [ "$SOUND_SERVER" == "alsa" ]; then
-    log_message "ERROR: ALSA does not support combined_sinks. Consider using PipeWire or PulseAudio."
-    exit 1
+    create_combined_alsa_device
+
+    #log_message "Playing test sound through combined ALSA device..."
+    #aplay -D "default" /usr/share/sounds/alsa/Front_Center.wav
+    exit 0
 fi
 
 if [ "$EUID" -eq 0 ]; then
