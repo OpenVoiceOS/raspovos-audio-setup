@@ -18,10 +18,10 @@ OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"  # Get the username of the first
 # Returns the sound server type as a string
 detect_sound_server() {
     # Check if PipeWire is installed
-    if command -v pipewire > /dev/null; then
+    if pgrep -x pipewire >/dev/null; then
         echo "pipewire"
     # Check if PulseAudio is installed
-    elif command -v pulseaudio > /dev/null; then
+    elif pgrep -x pulseaudio >/dev/null; then
         echo "pulse"
     # Check if ALSA is available
     elif command -v aplay > /dev/null && command -v amixer > /dev/null; then
