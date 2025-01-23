@@ -1,7 +1,7 @@
 [Unit]
 Description=Sound card autoconfiguration service
-After=sound.target
-Wants=sound.target
+Requires=i2csound.service
+After=i2csound.service
 
 [Service]
 Type=oneshot
@@ -12,4 +12,4 @@ Restart=on-failure
 RestartSec=10
 
 [Install]
-WantedBy=default.target
+WantedBy=sound.target
