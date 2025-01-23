@@ -4,6 +4,9 @@
 
 This repository provides scripts and systemd services to manage audio configurations, simplifying tasks like setting default soundcards, combining audio sinks, and managing USB soundcard volumes. It's designed for users looking to optimize their Raspberry Pi's audio capabilities without diving deep into manual setup.  
 
+
+> ⚠️ Alpha - this repository might not be quite ready for end-users
+
 ---
 
 ## Goals
