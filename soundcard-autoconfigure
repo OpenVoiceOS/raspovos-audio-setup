@@ -41,6 +41,7 @@ HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
 HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on RPi 5
 GOOGLE_VOICEKIT_V1="snd_rpi_googlevoicehat"  # User manually configures this soundcard
 RESPEAKER_2MIC="wm8960-soundcard"  # Respeaker 2mic card
+HIFIBERRY_DAC_PRO="snd_rpi_hifiberry_dacplus"
 
 # Environment variables for PipeWire (or PulseAudio)
 export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
@@ -267,6 +268,19 @@ setup_googlevoicekitv1_soundcard() {
     fi
 }
 
+# Function to setup HiFiberry DAC Pro soundcard
+setup_hifiberry_dac_pro_soundcard() {
+    log_message "HiFiBerry DAC Pro detected by ovos-i2csound."
+    if aplay -l | grep "$HIFIBERRY_DAC_PRO"; then
+        local CARD_NUMBER=$(aplay -l | grep "$HIFIBERRY_DAC_PRO" | awk '{print $2}' | cut -d ':' -fi)
+        log_message "Detected CARD_NUMBER for HiFiBerry DAC Pro soundcard: $CARD_NUMBER"
+        setup_card "$CARD_NUMBER"
+    else
+        log_message "Error: ovos-i2csound detected HiFiBerry DAC Pro but 'aplay -l' could not detect '$HIFIBERRY_DAC_PRO'"
+        exit 1
+    fi
+}
+
 # Function to set up fallback soundcard
 setup_fallback_soundcard() {
     local USB_CARD=""
@@ -330,6 +344,9 @@ case "$i2c_platform" in
         ;;
     *MARK1*)
         setup_mark1_soundcard
+        ;;
+    *HIFIBERRYPRO*)
+        setup_hifiberry_dac_pro_soundcard
         ;;
     *)
         setup_fallback_soundcard
