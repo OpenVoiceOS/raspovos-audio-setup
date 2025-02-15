@@ -272,7 +272,7 @@ setup_googlevoicekitv1_soundcard() {
 setup_hifiberry_dac_pro_soundcard() {
     log_message "HiFiBerry DAC Pro detected by ovos-i2csound."
     if aplay -l | grep "$HIFIBERRY_DAC_PRO"; then
-        local CARD_NUMBER=$(aplay -l | grep "$HIFIBERRY_DAC_PRO" | awk '{print $2}' | cut -d ':' -fi)
+        local CARD_NUMBER=$(aplay -l | grep "$HIFIBERRY_DAC_PRO" | awk '{print $2}' | cut -d ':' -f1)
         log_message "Detected CARD_NUMBER for HiFiBerry DAC Pro soundcard: $CARD_NUMBER"
         setup_card "$CARD_NUMBER"
     else
