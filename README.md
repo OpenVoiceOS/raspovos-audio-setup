@@ -169,9 +169,11 @@ Enjoy configuring your audio setup with ease! 🎉
 
 ## Credits
 
+This plugin was developed by [TigreGotico](https://tigregotico.pt) for OpenVoiceOS under the [ILENIA](https://proyectoilenia.es) project.
+
 <img src="img.png" width="128"/>
 
 > This work was funded by the Ministerio para la Transformación Digital y de la Función Pública and Plan de
 > Recuperación, Transformación y Resiliencia - Funded by EU – NextGenerationEU within the framework of the project
-> ILENIA
+> [ILENIA](https://proyectoilenia.es)
 > with reference 2022/TL22/00215337
