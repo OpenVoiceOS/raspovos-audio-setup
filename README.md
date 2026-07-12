@@ -52,8 +52,8 @@ This repository provides scripts and systemd services to manage audio configurat
 Run the following command to install all necessary scripts and enable the systemd services:
 
 ```bash
-git clone https://github.com/your-repo/raspOVOS-audio-setup.git
-cd raspOVOS-audio-setup
+git clone https://github.com/OpenVoiceOS/raspovos-audio-setup.git
+cd raspovos-audio-setup
 sudo bash install.sh
 ```
 
