@@ -1,33 +1,33 @@
 #!/bin/bash
+# Script: usb-autovolume
+# Description: Sets a sane default volume on a freshly connected USB soundcard.
+# Usage: /usr/libexec/usb-autovolume (triggered from a udev rule)
+
 # Configuration
 readonly DEFAULT_VOLUME=85                   # Default volume to set for USB soundcard
+
+# Log file used by the shared log_message helper
+LOG_FILE="/tmp/autovolume-usb.log"
+
+# Locate and source the shared helpers
+for _lib in "$(dirname "$(readlink -f "$0")")/lib/audio-utils.sh" \
+            "/usr/libexec/ovos-audio-utils.sh"; do
+    if [ -f "$_lib" ]; then
+        # shellcheck source=lib/audio-utils.sh
+        source "$_lib"
+        break
+    fi
+done
+if [ -z "${_OVOS_AUDIO_UTILS_LOADED:-}" ]; then
+    echo "Error: cannot locate audio-utils.sh library" >&2
+    exit 1
+fi
 
 # Enable strict error handling
 set -euo pipefail
 
-# Function to handle errors
-# Logs an error message with the line number and error code, then exits
-# Arguments:
-#   $1 - Line number where the error occurred
-#   $2 - Error code returned by the command
-error_handler() {
-    local line_no=$1
-    local error_code=$2
-    log_message "Error (code: ${error_code}) occurred on line ${line_no}"
-    exit ${error_code}
-}
-
-# Trap any error and pass it to the error handler
+# Trap any error and pass it to the shared error handler
 trap 'error_handler ${LINENO} $?' ERR
-
-# Log function to write messages to a log file
-# This appends messages with a timestamp to /tmp/autovolume-usb.log
-# Arguments:
-#   $1 - Message to log
-log_message() {
-    echo "$1"
-    echo "$(date) - $1" >> /tmp/autovolume-usb.log
-}
 
 # Sleep for a brief moment to ensure the device is fully initialized
 sleep 1
@@ -39,17 +39,8 @@ log_message "$(aplay -l)"
 # NOTE: If there are multiple USB cards detected, we assume the last entry is the intended one
 # This resolves ambiguity if multiple USB soundcards are detected
 # TODO - pass env vars from udev so this isnt ambiguous, keep this method as fallback
-USB_CARDS=$(aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1)
-if [ -n "$USB_CARDS" ]; then
-    # If multiple USB soundcards are detected, log a warning and pick the last one
-    CARD_COUNT=$(echo "$USB_CARDS" | wc -l)
-    if [ "$CARD_COUNT" -gt 1 ]; then
-        log_message "Warning: Multiple USB soundcards detected. Using the last detected card."
-    fi
-
-    # Select the last USB soundcard detected
-    USB_CARD=$(echo "$USB_CARDS" | tail -n 1)
-
+USB_CARD=$(pick_usb_card)
+if [ -n "$USB_CARD" ]; then
     # Output the soundcard index for debugging
     log_message "USB audio device detected. Soundcard index: $USB_CARD"
 
