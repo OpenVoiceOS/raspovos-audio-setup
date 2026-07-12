@@ -6,6 +6,23 @@
 #
 # Usage: /usr/libexec/combine-sinks
 
+# Log file used by the shared log_message helper
+LOG_FILE="/tmp/autosink.log"
+
+# Locate and source the shared helpers
+for _lib in "$(dirname "$(readlink -f "$0")")/lib/audio-utils.sh" \
+            "/usr/libexec/ovos-audio-utils.sh"; do
+    if [ -f "$_lib" ]; then
+        # shellcheck source=lib/audio-utils.sh
+        source "$_lib"
+        break
+    fi
+done
+if [ -z "${_OVOS_AUDIO_UTILS_LOADED:-}" ]; then
+    echo "Error: cannot locate audio-utils.sh library" >&2
+    exit 1
+fi
+
 # Set the necessary environment variables for PipeWire (or PulseAudio)
 export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
 export XDG_RUNTIME_DIR="/run/user/1000/"
@@ -13,35 +30,16 @@ export XDG_RUNTIME_DIR="/run/user/1000/"
 # Set error handling
 set -euo pipefail
 
-
-OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
-MK1_CARD_NAME="snd_rpi_proto"  # Mark 1 soundcard
-HDMI_CARD_NAME="vc4-hdmi"       # HDMI soundcard
-HEADPHONES_CARD_NAME="bcm2835"  # Onboard soundcard, not available on rpi5
-
-
-# Function to handle errors
-error_handler() {
-    local line_no=$1
-    local error_code=$2
-    log_message "Error (code: ${error_code}) occurred on line ${line_no}"
-    exit ${error_code}
-}
-
 trap 'error_handler ${LINENO} $?' ERR
 
-# Log function to write to a log file
-# Args:
-#   $1: Message to log
-log_message() {
-    echo "$1"
-    echo "$(date) - $1" >> /tmp/autosink.log
+# Join the output of pulse_list_sinks into a comma separated list
+list_sinks_csv() {
+    pulse_list_sinks | tr '\n' ',' | sed 's/,$//'
 }
-
 
 log_message "Setting up audio output as combined sinks"
 
-if [ "$EUID" -eq 0 ]; then
+if is_root; then
     log_message "Running as root"
 else
     log_message "Running as user"
@@ -54,11 +52,11 @@ if pactl list short sinks | grep -q "auto_null"; then
 fi
 
 # Check if the file exists before reading it
-if [ -f /etc/OpenVoiceOS/i2c_platform ]; then
-    i2c_platform=$(cat /etc/OpenVoiceOS/i2c_platform)
+if [ -f "$I2C_PLATFORM_FILE" ]; then
+    i2c_platform=$(read_i2c_platform)
     log_message "ovos-i2csound detection: $i2c_platform"
 else
-    log_message "/etc/OpenVoiceOS/i2c_platform not found."
+    log_message "$I2C_PLATFORM_FILE not found."
     i2c_platform=""
 fi
 
@@ -66,8 +64,8 @@ fi
 if echo "$i2c_platform" | grep -q "MARK1"; then
     # If it's a Mark 1 device, configure the Mark 1 soundcard
     # NOTE: sometimes errors here if early in boot process, it's fine as the .service retries on failure
-    if aplay -l | grep "$MK1_CARD_NAME"; then
-        CARD_NUMBER=$(aplay -l | grep "$MK1_CARD_NAME" | awk '{print $2}' | cut -d':' -f1)
+    CARD_NUMBER=$(get_card_number "$MK1_CARD_NAME")
+    if [ -n "$CARD_NUMBER" ]; then
         log_message "Detected CARD_NUMBER for Mark 1 soundcard: $CARD_NUMBER"
     else
         log_message "Error: ovos-i2csound detected Mark1 but 'aplay -l' could not detect '$MK1_CARD_NAME'"
@@ -79,7 +77,7 @@ log_message "Sinks before action: $(pactl list short sinks)"
 
 # Get all sinks, excluding 'auto_combined' and 'auto_null'
 # NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
-SINKS=$(pactl list short sinks | awk '{print $2}' | grep -v 'auto_combined' | grep -v 'auto_null' | tr '\n' ',' | sed 's/,$//')
+SINKS=$(list_sinks_csv)
 NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
 
 # Retry logic if no sinks are found
@@ -88,7 +86,7 @@ while [ "$NUM_SINKS" -eq 0 ] && [ "$RETRIES" -gt 0 ]; do
     log_message "Retrying to find sinks... ($RETRIES retries left)"
     sleep 1
     RETRIES=$((RETRIES - 1))
-    SINKS=$(pactl list short sinks | awk '{print $2}' | grep -v 'auto_combined' | grep -v 'auto_null' | tr '\n' ',' | sed 's/,$//')
+    SINKS=$(list_sinks_csv)
     NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
 done
 

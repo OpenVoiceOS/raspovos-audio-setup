@@ -10,23 +10,19 @@ if [ -z "$OVOS_USER" ]; then
 fi
 
 
-# Detects the sound server currently in use on the system.
-# Returns the name of the sound server (pipewire, pulse, alsa) or exits with an error if none is found.
-detect_sound_server() {
-    # Check if PipeWire is installed
-    if command -v pipewire > /dev/null; then
-        echo "pipewire"
-    # Check if PulseAudio is installed
-    elif command -v pulseaudio > /dev/null; then
-        echo "pulse"
-    # Check if ALSA is available
-    elif command -v aplay > /dev/null && command -v amixer > /dev/null; then
-        echo "alsa"
-    else
-        echo "No sound server detected"
-        exit 1
+# Locate and source the shared helpers (repo checkout first, then installed copy)
+for _lib in "$(dirname "$(readlink -f "$0")")/lib/audio-utils.sh" \
+            "/usr/libexec/ovos-audio-utils.sh"; do
+    if [ -f "$_lib" ]; then
+        # shellcheck source=lib/audio-utils.sh
+        source "$_lib"
+        break
     fi
-}
+done
+if [ -z "${_OVOS_AUDIO_UTILS_LOADED:-}" ]; then
+    echo "Error: cannot locate audio-utils.sh library" >&2
+    exit 1
+fi
 
 # Installs a file from the source path to the destination path.
 # Arguments:
@@ -57,6 +53,7 @@ declare -A PATHS=(
     [USB_AUTOVOLUME_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/usb-autovolume"
     [OVOS_AUDIO_SETUP_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/ovos-audio-setup"
     [UPDATE_AUDIO_SINKS_SCRIPT_PATH]="$(dirname "$(readlink -f "$0")")/combine-sinks"
+    [AUDIO_UTILS_LIB_PATH]="$(dirname "$(readlink -f "$0")")/lib/audio-utils.sh"
 )
 
 # Target directories for installation
@@ -75,6 +72,7 @@ sudo systemctl daemon-reload
 
 # Install additional scripts
 echo "Installing additional scripts..."
+install_file "${PATHS[AUDIO_UTILS_LIB_PATH]}" "$LIBEXEC_DIR/ovos-audio-utils.sh"
 install_file "${PATHS[OVOS_AUDIO_SETUP_SCRIPT_PATH]}" "$BIN_DIR/ovos-audio-setup"
 install_file "${PATHS[UPDATE_AUDIO_SINKS_SCRIPT_PATH]}" "$LIBEXEC_DIR/combine-sinks"
 install_file "${PATHS[SOUNDCARD_AUTOCONFIGURE_SCRIPT_PATH]}" "$LIBEXEC_DIR/soundcard-autoconfigure"

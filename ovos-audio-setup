@@ -1,6 +1,18 @@
 #!/bin/bash
 
-OVOS_USER="$(getent passwd 1000 | cut -d: -f1)"
+# Locate and source the shared helpers
+for _lib in "$(dirname "$(readlink -f "$0")")/lib/audio-utils.sh" \
+            "/usr/libexec/ovos-audio-utils.sh"; do
+    if [ -f "$_lib" ]; then
+        # shellcheck source=lib/audio-utils.sh
+        source "$_lib"
+        break
+    fi
+done
+if [ -z "${_OVOS_AUDIO_UTILS_LOADED:-}" ]; then
+    echo "Error: cannot locate audio-utils.sh library" >&2
+    exit 1
+fi
 
 # I2C_DEVICE_FILE and UDEV_SOUNDCARD_AUTOSELECT_RULE_FILE are used for detecting and configuring soundcards automatically.
 I2C_DEVICE_FILE="/etc/OpenVoiceOS/i2c_platform"
@@ -23,22 +35,6 @@ UDEV_USB_AUTO_VOLUME_RULE='ACTION=="add", SUBSYSTEM=="sound", ENV{ID_BUS}=="usb"
 # Service names
 COMBINED_SINKS_SERVICE="combine_sinks.service"
 AUTOCONFIGURE_SERVICE="autoconfigure_soundcard.service"
-
-detect_sound_server() {
-    # Check if PipeWire is installed
-    if command -v pipewire > /dev/null; then
-        echo "pipewire"
-    # Check if PulseAudio is installed
-    elif command -v pulseaudio > /dev/null; then
-        echo "pulse"
-    # Check if ALSA is available
-    elif command -v aplay > /dev/null && command -v amixer > /dev/null; then
-        echo "alsa"
-    else
-        echo "No sound server detected"
-        exit 1
-    fi
-}
 
 SOUND_SERVER=$(detect_sound_server)
 
