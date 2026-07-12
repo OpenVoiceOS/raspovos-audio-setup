@@ -129,6 +129,20 @@ pick_usb_card() {
     echo "$usb_cards" | tail -n 1
 }
 
+# Extract the ALSA card number for the device that triggered a udev rule,
+# from the environment udev passes to RUN+= scripts (DEVPATH like
+# ".../sound/card2" or DEVNAME like "/dev/snd/controlC2").
+# Returns: card number, or "" when not running from udev (or no match)
+udev_usb_card() {
+    local card=""
+    if [[ "${DEVPATH:-}" =~ /sound/card([0-9]+) ]]; then
+        card="${BASH_REMATCH[1]}"
+    elif [[ "${DEVNAME:-}" =~ controlC([0-9]+) ]]; then
+        card="${BASH_REMATCH[1]}"
+    fi
+    echo "$card"
+}
+
 # Select the fallback soundcard following the fixed priority:
 #   USB > user-installed HAT (any non-onboard card) > headphones (bcm2835) > HDMI
 # Returns: "<type> <card_number>" (type: usb|other|headphones|hdmi), or "" if none
@@ -191,6 +205,23 @@ pw_card2sink() {
             echo "$sink"
         fi
     done
+}
+
+# Find the PipeWire sink ID whose node.name matches $1 (via wpctl)
+# Arguments:
+#   $1: node.name to look for (e.g. "auto_combined")
+# Returns: sink ID, return code 1 if not found
+pw_sink_by_name() {
+    local name="$1"
+    local sink node_name
+    for sink in $(pw_list_sink_ids); do
+        node_name=$(wpctl inspect "$sink" | grep -i "node.name" | awk -F'"' '{print $2}')
+        if [ "$node_name" == "$name" ]; then
+            echo "$sink"
+            return 0
+        fi
+    done
+    return 1
 }
 
 # Map an ALSA card index to a PulseAudio sink name (via pactl)

@@ -36,10 +36,14 @@ sleep 1
 log_message "$(aplay -l)"
 
 # Check for USB soundcard
-# NOTE: If there are multiple USB cards detected, we assume the last entry is the intended one
-# This resolves ambiguity if multiple USB soundcards are detected
-# TODO - pass env vars from udev so this isnt ambiguous, keep this method as fallback
-USB_CARD=$(pick_usb_card)
+# When triggered from udev, the card number is taken from the udev-provided
+# environment (DEVPATH/DEVNAME point at the exact device that fired the rule),
+# which is unambiguous even with several USB soundcards connected.
+# Otherwise fall back to scanning 'aplay -l' (last USB card wins).
+USB_CARD=$(udev_usb_card)
+if [ -z "$USB_CARD" ]; then
+    USB_CARD=$(pick_usb_card)
+fi
 if [ -n "$USB_CARD" ]; then
     # Output the soundcard index for debugging
     log_message "USB audio device detected. Soundcard index: $USB_CARD"

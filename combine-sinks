@@ -32,6 +32,14 @@ set -euo pipefail
 
 trap 'error_handler ${LINENO} $?' ERR
 
+# combine-sinks drives the sound server through pactl, which is provided by
+# PulseAudio or by pipewire-pulse (stock on raspOVOS images)
+SOUND_SERVER=$(detect_sound_server)
+if [ "$SOUND_SERVER" == "alsa" ]; then
+    log_message "ERROR: combine-sinks requires PipeWire or PulseAudio (pactl). Install 'pipewire pipewire-pulse wireplumber' (install.sh offers this), or configure an ALSA 'multi' pcm manually in ~/.asoundrc."
+    exit 1
+fi
+
 # Join the output of pulse_list_sinks into a comma separated list
 list_sinks_csv() {
     pulse_list_sinks | tr '\n' ',' | sed 's/,$//'
@@ -112,7 +120,12 @@ if [ "$NUM_SINKS" -gt 1 ]; then
 
     # Verify the sink exists before setting as default
     if pactl list short sinks | grep -q "auto_combined"; then
-        pactl set-default-sink auto_combined
+        # Prefer the native tool of the running sound server to set the default
+        if [ "$SOUND_SERVER" == "pipewire" ] && SINK_ID=$(pw_sink_by_name auto_combined); then
+            wpctl set-default "$SINK_ID"
+        else
+            pactl set-default-sink auto_combined
+        fi
         log_message "Combined sink created with outputs: $SINKS (module ID: $MODULE_ID)"
     else
         log_message "Combined sink creation failed"
