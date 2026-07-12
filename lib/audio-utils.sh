@@ -104,12 +104,14 @@ read_i2c_platform() {
 # Returns: card number, or "" if not found
 get_card_number() {
     local card_name="$1"
-    aplay -l | grep "$card_name" | awk '{print $2}' | cut -d':' -f1 | head -n 1
+    # '|| true' keeps a no-match grep from aborting 'set -euo pipefail' callers
+    aplay -l | grep "$card_name" | awk '{print $2}' | cut -d':' -f1 | head -n 1 || true
 }
 
 # List the card numbers of all USB soundcards, one per line
 list_usb_cards() {
-    aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1
+    # '|| true' keeps a no-match grep from aborting 'set -euo pipefail' callers
+    aplay -l | grep "card" | grep -i "usb" | awk '{print $2}' | cut -d':' -f1 || true
 }
 
 # Pick the USB card to use: the last one detected wins when there are several
@@ -154,19 +156,19 @@ select_fallback_card() {
         return 0
     fi
     # Any other non-onboard soundcard (prioritize user-installed cards over onboard ones)
-    card=$(aplay -l | grep "card" | grep -v -i "$HEADPHONES_CARD_NAME" | grep -v -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    card=$(aplay -l | grep "card" | grep -v -i "$HEADPHONES_CARD_NAME" | grep -v -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1 || true)
     if [ -n "$card" ]; then
         echo "other $card"
         return 0
     fi
     # Onboard BCM soundcard (headphones)
-    card=$(aplay -l | grep "card" | grep -i "$HEADPHONES_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    card=$(aplay -l | grep "card" | grep -i "$HEADPHONES_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1 || true)
     if [ -n "$card" ]; then
         echo "headphones $card"
         return 0
     fi
     # HDMI as last resort
-    card=$(aplay -l | grep "card" | grep -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1)
+    card=$(aplay -l | grep "card" | grep -i "$HDMI_CARD_NAME" | awk '{print $2}' | cut -d':' -f1 | head -n 1 || true)
     if [ -n "$card" ]; then
         echo "hdmi $card"
         return 0

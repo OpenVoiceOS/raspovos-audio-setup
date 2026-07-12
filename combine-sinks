@@ -27,6 +27,12 @@ fi
 export PULSE_RUNTIME_PATH="/run/user/1000/pulse/"
 export XDG_RUNTIME_DIR="/run/user/1000/"
 
+# When triggered as root (udev rule), re-exec as the OVOS user so pactl/wpctl
+# can reach the user session's sound server
+if is_root && [ -n "$OVOS_USER" ]; then
+    exec runuser -u "$OVOS_USER" -- "$0" "$@"
+fi
+
 # Set error handling
 set -euo pipefail
 
@@ -43,6 +49,15 @@ fi
 # Join the output of pulse_list_sinks into a comma separated list
 list_sinks_csv() {
     pulse_list_sinks | tr '\n' ',' | sed 's/,$//'
+}
+
+# Count entries in a comma separated list (0 for the empty string)
+count_csv() {
+    if [ -z "$1" ]; then
+        echo 0
+    else
+        echo "$1" | tr ',' '\n' | wc -l
+    fi
 }
 
 log_message "Setting up audio output as combined sinks"
@@ -86,7 +101,7 @@ log_message "Sinks before action: $(pactl list short sinks)"
 # Get all sinks, excluding 'auto_combined' and 'auto_null'
 # NOTE: sometimes errors here if early in boot process, its fine as the .service retries on failure
 SINKS=$(list_sinks_csv)
-NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
+NUM_SINKS=$(count_csv "$SINKS")
 
 # Retry logic if no sinks are found
 RETRIES=5
@@ -95,7 +110,7 @@ while [ "$NUM_SINKS" -eq 0 ] && [ "$RETRIES" -gt 0 ]; do
     sleep 1
     RETRIES=$((RETRIES - 1))
     SINKS=$(list_sinks_csv)
-    NUM_SINKS=$(echo "$SINKS" | tr ',' '\n' | wc -l)
+    NUM_SINKS=$(count_csv "$SINKS")
 done
 
 # Check if auto_combined is present

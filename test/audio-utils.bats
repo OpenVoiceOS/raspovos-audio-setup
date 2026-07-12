@@ -59,6 +59,36 @@ setup() {
     [ -z "$output" ]
 }
 
+# ---------------------------------------------------- strict mode (set -euo pipefail)
+# The real tools source the lib under 'set -euo pipefail' with an ERR trap;
+# no-match lookups must stay graceful there, not abort the caller.
+
+_strict() {  # run $1 in a strict-mode shell that sources the lib
+    run bash -c "set -euo pipefail; source '$REPO_ROOT/lib/audio-utils.sh'; trap 'echo ERR_TRAP; exit 99' ERR; $1"
+}
+
+@test "strict mode: get_card_number no-match does not abort the caller" {
+    export APLAY_FIXTURE="$FIXTURES/aplay_all_cards.txt"
+    _strict 'v=$(get_card_number snd_rpi_proto); echo "got:[$v]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"got:[]"* ]]
+    [[ "$output" != *"ERR_TRAP"* ]]
+}
+
+@test "strict mode: pick_usb_card with no USB card does not abort the caller" {
+    export APLAY_FIXTURE="$FIXTURES/aplay_onboard_only.txt"
+    _strict 'v=$(pick_usb_card); echo "got:[$v]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"got:[]"* ]]
+}
+
+@test "strict mode: select_fallback_card with no cards does not abort the caller" {
+    export APLAY_FIXTURE="$FIXTURES/aplay_none.txt"
+    _strict 'v=$(select_fallback_card); echo "got:[$v]"'
+    [ "$status" -eq 0 ]
+    [[ "$output" == *"got:[]"* ]]
+}
+
 # ------------------------------------------- fallback priority (USB > HAT > headphones > HDMI)
 
 @test "priority: USB wins over HAT, headphones and HDMI" {

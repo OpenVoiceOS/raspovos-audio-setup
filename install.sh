@@ -100,7 +100,7 @@ if [[ "$SOUND_SERVER" != "pipewire" ]]; then
               fi
             fi
             echo "Installing PipeWire..."
-            if ! apt-get install -y --no-install-recommends pipewire pipewire-alsa wireplumber; then
+            if ! apt-get install -y --no-install-recommends pipewire pipewire-alsa pipewire-pulse pulseaudio-utils wireplumber; then
                 echo "Failed to install PipeWire"
                 exit 1
             fi

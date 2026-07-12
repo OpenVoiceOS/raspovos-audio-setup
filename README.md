@@ -59,7 +59,7 @@ sudo bash install.sh
 
 ## Backend support matrix
 
-PipeWire is the primary target (stock on raspOVOS Bookworm images). `pactl` is provided by `pipewire-pulse` there, so the PulseAudio implementations work against PipeWire too.
+PipeWire is the primary target (stock on raspOVOS Bookworm images). The `pactl` binary (from `pulseaudio-utils`, preinstalled on the images) talks to PipeWire through `pipewire-pulse`, so the PulseAudio implementations work against PipeWire too.
 
 | Feature | PipeWire | PulseAudio | ALSA only |
 |---------|----------|------------|-----------|
