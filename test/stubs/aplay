@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Test stub for aplay: prints the fixture pointed at by $APLAY_FIXTURE
+if [ -z "${APLAY_FIXTURE:-}" ]; then
+    echo "aplay stub: APLAY_FIXTURE not set" >&2
+    exit 1
+fi
+cat "$APLAY_FIXTURE"

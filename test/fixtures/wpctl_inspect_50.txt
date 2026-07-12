@@ -1,0 +1,8 @@
+id 50, type PipeWire:Interface:Node
+    api.alsa.card = "1"
+    api.alsa.pcm.card = "1"
+    api.alsa.path = "front:1"
+    audio.channels = "2"
+    node.name = "alsa_output.platform-bcm2835_audio.stereo-fallback"
+    node.description = "Built-in Audio Stereo"
+    media.class = "Audio/Sink"

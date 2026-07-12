@@ -1,0 +1,13 @@
+**** List of PLAYBACK Hardware Devices ****
+card 0: vc4hdmi0 [vc4-hdmi-0], device 0: MAI PCM i2s-hifi-0 [MAI PCM i2s-hifi-0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 1: Headphones [bcm2835 Headphones], device 0: bcm2835 Headphones [bcm2835 Headphones]
+  Subdevices: 8/8
+  Subdevice #0: subdevice #0
+card 2: wm8960soundcard [wm8960-soundcard], device 0: bcm2835-i2s-wm8960-hifi wm8960-hifi-0 [bcm2835-i2s-wm8960-hifi wm8960-hifi-0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+card 3: Device [USB Audio Device], device 0: USB Audio [USB Audio]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0

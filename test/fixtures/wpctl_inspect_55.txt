@@ -1,0 +1,8 @@
+id 55, type PipeWire:Interface:Node
+    api.alsa.card = "3"
+    api.alsa.pcm.card = "3"
+    api.alsa.path = "front:3"
+    audio.channels = "2"
+    node.name = "alsa_output.usb-0d8c_USB_Audio_Device-00.analog-stereo"
+    node.description = "USB Audio Device Analog Stereo"
+    media.class = "Audio/Sink"

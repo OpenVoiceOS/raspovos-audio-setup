@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Test stub for wpctl:
+#   wpctl status      -> cat $WPCTL_STATUS_FIXTURE
+#   wpctl inspect N   -> cat $WPCTL_FIXTURE_DIR/wpctl_inspect_N.txt
+#   wpctl set-default -> record the call in $WPCTL_CALL_LOG
+case "$1" in
+    status)
+        cat "$WPCTL_STATUS_FIXTURE"
+        ;;
+    inspect)
+        f="$WPCTL_FIXTURE_DIR/wpctl_inspect_$2.txt"
+        if [ -f "$f" ]; then
+            cat "$f"
+        else
+            echo "wpctl stub: no fixture for sink $2" >&2
+            exit 1
+        fi
+        ;;
+    set-default)
+        echo "set-default $2" >> "${WPCTL_CALL_LOG:-/dev/null}"
+        ;;
+    *)
+        echo "wpctl stub: unhandled args: $*" >&2
+        exit 1
+        ;;
+esac

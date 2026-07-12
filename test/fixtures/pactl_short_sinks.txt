@@ -1,0 +1,4 @@
+0	auto_null	module-null-sink.c	s16le 2ch 44100Hz	SUSPENDED
+1	alsa_output.platform-bcm2835_audio.stereo-fallback	PipeWire	s16le 2ch 48000Hz	SUSPENDED
+2	alsa_output.usb-0d8c_USB_Audio_Device-00.analog-stereo	PipeWire	s16le 2ch 48000Hz	RUNNING
+3	auto_combined	module-combine-sink.c	s16le 2ch 48000Hz	IDLE

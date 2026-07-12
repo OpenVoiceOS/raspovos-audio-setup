@@ -1,0 +1,21 @@
+Sink #0
+	State: SUSPENDED
+	Name: alsa_output.platform-bcm2835_audio.stereo-fallback
+	Description: Built-in Audio Stereo
+	Driver: PipeWire
+	Sample Specification: s16le 2ch 48000Hz
+	Properties:
+		api.alsa.card = "1"
+		api.alsa.card.name = "bcm2835 Headphones"
+		node.name = "alsa_output.platform-bcm2835_audio.stereo-fallback"
+
+Sink #1
+	State: RUNNING
+	Name: alsa_output.usb-0d8c_USB_Audio_Device-00.analog-stereo
+	Description: USB Audio Device Analog Stereo
+	Driver: PipeWire
+	Sample Specification: s16le 2ch 48000Hz
+	Properties:
+		api.alsa.card = "3"
+		api.alsa.card.name = "USB Audio Device"
+		node.name = "alsa_output.usb-0d8c_USB_Audio_Device-00.analog-stereo"
