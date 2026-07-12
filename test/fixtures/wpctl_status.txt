@@ -1,0 +1,23 @@
+PipeWire 'pipewire-0' [1.0.5, ovos@raspovos, cookie:12345]
+ └─ Clients:
+        32. WirePlumber                         [1.0.5, ovos@raspovos, pid:812]
+        33. WirePlumber [export]                [1.0.5, ovos@raspovos, pid:812]
+
+Audio
+ ├─ Devices:
+ │      41. Built-in Audio                      [alsa]
+ │      42. USB Audio Device                    [alsa]
+ │
+ ├─ Sinks:
+ │  *   50. Built-in Audio Stereo               [vol: 0.74]
+ │      55. USB Audio Device Analog Stereo      [vol: 1.00]
+ │
+ ├─ Sources:
+ │      60. USB Audio Device Mono               [vol: 1.00]
+ │
+ └─ Streams:
+
+Video
+ ├─ Devices:
+ │
+ └─ Sinks:

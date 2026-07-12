@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Test stub for pactl:
+#   pactl list sinks        -> cat $PACTL_SINKS_FIXTURE
+#   pactl list short sinks  -> cat $PACTL_SHORT_SINKS_FIXTURE
+if [ "$1" == "list" ] && [ "$2" == "short" ] && [ "$3" == "sinks" ]; then
+    cat "$PACTL_SHORT_SINKS_FIXTURE"
+elif [ "$1" == "list" ] && [ "$2" == "sinks" ]; then
+    cat "$PACTL_SINKS_FIXTURE"
+else
+    echo "pactl stub: unhandled args: $*" >&2
+    exit 1
+fi
