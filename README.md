@@ -1,10 +1,10 @@
-# 🎧🔊 raspOVOS-audio-setup 🎶
+# raspOVOS-audio-setup
 
-**Automatic audio configuration for Raspberry Pi devices running OpenVoiceOS.**
+Automatic audio configuration for Raspberry Pi devices running OpenVoiceOS.
 
-Shell tools and systemd units that keep audio working when hardware changes — plug in a USB soundcard, add a HAT, or move the SD card to different hardware and the right output is selected automatically. They also expose more complex setups (combined outputs, echo cancellation) through a simple menu.
+This repository has shell tools and systemd units that keep audio working when hardware changes. Plug in a USB soundcard, add a HAT, or move the SD card to different hardware, and the tools select the right output automatically. They also expose more complex setups, such as combined outputs and echo cancellation, through a simple menu.
 
-> 💡 **Tip:** Hardware detection and driver setup for I2C HATs (Mark 1, Respeaker, HiFiBerry...) is handled by the companion project [ovos-i2csound](https://github.com/OpenVoiceOS/ovos-i2csound). This repo consumes its detection hints from `/etc/OpenVoiceOS/i2c_platform`.
+**Note:** The companion project [ovos-i2csound](https://github.com/OpenVoiceOS/ovos-i2csound) handles hardware detection and driver setup for I2C HATs (Mark 1, Respeaker, HiFiBerry, and others). This repository reads its detection hints from `/etc/OpenVoiceOS/i2c_platform`.
 
 ---
 
@@ -12,31 +12,31 @@ Shell tools and systemd units that keep audio working when hardware changes — 
 
 | Tool | Installed to | What it does |
 |------|--------------|--------------|
-| `ovos-audio-setup` | `/usr/local/bin` | Interactive menu (also scriptable: `ovos-audio-setup <choice>`) to select the default soundcard, enable/disable the automation below, and revert everything. |
-| `soundcard-autoconfigure` | `/usr/libexec` | Selects the default output card on boot and on USB plug/unplug events. Honors the `ovos-i2csound` hint first, then falls back by fixed priority. |
-| `combine-sinks` | `/usr/libexec` | Creates an `auto_combined` sink that plays audio through **all** outputs at once, and sets it as default. Re-run by udev when USB cards come and go. |
-| `usb-autovolume` | `/usr/libexec` | Sets a freshly connected USB soundcard to an audible volume (85%). Identifies the card from the udev event environment, with an `aplay -l` scan as fallback. |
-| `lib/audio-utils.sh` | `/usr/libexec/ovos-audio-utils.sh` | Shared helper library sourced by all of the above (sound-server detection, card/sink parsing, logging). Not a CLI. |
+| `ovos-audio-setup` | `/usr/local/bin` | Interactive menu (also scriptable: `ovos-audio-setup <choice>`) to select the default soundcard, enable or disable the automation below, and revert everything. |
+| `soundcard-autoconfigure` | `/usr/libexec` | Selects the default output card on boot and on USB plug/unplug events. It honors the `ovos-i2csound` hint first, then falls back to a fixed priority. |
+| `combine-sinks` | `/usr/libexec` | Creates an `auto_combined` sink that plays audio through all outputs at once, and sets it as default. udev re-runs this tool when USB cards come and go. |
+| `usb-autovolume` | `/usr/libexec` | Sets a freshly connected USB soundcard to an audible volume (85%). It identifies the card from the udev event environment, with an `aplay -l` scan as fallback. |
+| `lib/audio-utils.sh` | `/usr/libexec/ovos-audio-utils.sh` | Shared helper library sourced by all of the above (sound-server detection, card/sink parsing, logging). It is not a CLI. |
 
-Plus two systemd units (`autoconfigure_soundcard.service`, `combine_sinks.service` — mutually exclusive with each other) and PipeWire config snippets for switch-on-connect and echo cancellation.
+The repository also has two systemd units (`autoconfigure_soundcard.service`, `combine_sinks.service`, which are mutually exclusive with each other) and PipeWire config snippets for switch-on-connect and echo cancellation.
 
 ## Soundcard selection priority
 
 `soundcard-autoconfigure` picks the default output in this order:
 
-1. **`ovos-i2csound` hint** — if `/etc/OpenVoiceOS/i2c_platform` names a known platform (Mark 1, WM8960/Respeaker-2mic, HiFiBerry DAC Pro, Google VoiceKit), that card is used.
-2. **USB** — last detected USB soundcard (a warning is logged if several are present).
-3. **User-installed HAT** — any other card that is neither the onboard headphones nor HDMI.
-4. **Headphones** — onboard `bcm2835` jack (not available on Pi 5).
-5. **HDMI** — `vc4-hdmi`, as last resort.
+1. **`ovos-i2csound` hint**: if `/etc/OpenVoiceOS/i2c_platform` names a known platform (Mark 1, WM8960/Respeaker-2mic, HiFiBerry DAC Pro, Google VoiceKit), the tool uses that card.
+2. **USB**: the last detected USB soundcard. The tool logs a warning if several are present.
+3. **User-installed HAT**: any other card that is neither the onboard headphones nor HDMI.
+4. **Headphones**: the onboard `bcm2835` jack (not available on Pi 5).
+5. **HDMI**: `vc4-hdmi`, as a last resort.
 
 ## How raspOVOS consumes this
 
-On [raspOVOS](https://github.com/OpenVoiceOS/raspOVOS) images this repo is baked in at image build time: the scripts are installed to `/usr/libexec` + `/usr/local/bin`, `autoconfigure_soundcard.service` is enabled, and udev rules re-trigger the tools on USB sound events. The unit and file names above are a contract with the image build — do not rename them. End users normally only interact with `ovos-audio-setup`.
+On [raspOVOS](https://github.com/OpenVoiceOS/raspOVOS) images, this repository is baked in at image build time. The build installs the scripts to `/usr/libexec` and `/usr/local/bin`, enables `autoconfigure_soundcard.service`, and sets up udev rules that re-trigger the tools on USB sound events. The unit and file names above are a contract with the image build, so do not rename them. End users normally only interact with `ovos-audio-setup`.
 
 ## Install on a generic system
 
-Works on any Debian-ish system (PipeWire recommended, stock on Raspberry Pi OS Bookworm):
+This works on any Debian-based system (PipeWire recommended, stock on Raspberry Pi OS Bookworm):
 
 ```bash
 git clone https://github.com/OpenVoiceOS/raspovos-audio-setup.git
@@ -59,27 +59,27 @@ sudo bash install.sh
 
 ## Backend support matrix
 
-PipeWire is the primary target (stock on raspOVOS Bookworm images). The `pactl` binary (from `pulseaudio-utils`, preinstalled on the images) talks to PipeWire through `pipewire-pulse`, so the PulseAudio implementations work against PipeWire too.
+PipeWire is the primary target (stock on raspOVOS Bookworm images). The `pactl` binary, from `pulseaudio-utils` and preinstalled on the images, talks to PipeWire through `pipewire-pulse`, so the PulseAudio implementations also work against PipeWire.
 
 | Feature | PipeWire | PulseAudio | ALSA only |
 |---------|----------|------------|-----------|
-| Default soundcard selection | ✅ `wpctl` | ✅ `pactl` | ✅ `~/.asoundrc` |
-| Switch-on-connect | ✅ config snippet | ✅ `module-switch-on-connect` | ⚠️ via udev + soundcard-autoconfigure |
-| USB auto-volume | ✅ (amixer, backend-independent) | ✅ | ✅ |
-| Combine sinks | ✅ `pactl` via pipewire-pulse + `wpctl` default | ✅ `module-combine-sink` | ❌ explicit error, install PipeWire |
-| Echo cancellation | ✅ config snippet | ✅ `module-echo-cancel` | ❌ explicit error, install PipeWire |
+| Default soundcard selection | Yes, `wpctl` | Yes, `pactl` | Yes, `~/.asoundrc` |
+| Switch-on-connect | Yes, config snippet | Yes, `module-switch-on-connect` | Partial, via udev + soundcard-autoconfigure |
+| USB auto-volume | Yes (amixer, backend-independent) | Yes | Yes |
+| Combine sinks | Yes, `pactl` via pipewire-pulse + `wpctl` default | Yes, `module-combine-sink` | No, explicit error, install PipeWire |
+| Echo cancellation | Yes, config snippet | Yes, `module-echo-cancel` | No, explicit error, install PipeWire |
 
-## 📊 Logging
+## Logging
 
-The tools log to `/tmp` — check these first if you have no audio output:
+The tools log to `/tmp`. Check these files first if you have no audio output:
 
-- `/tmp/autosoundcard.log` — soundcard autoconfiguration
-- `/tmp/autovolume-usb.log` — USB volume udev events
-- `/tmp/autosink.log` — combined sink creation
+- `/tmp/autosoundcard.log`: soundcard autoconfiguration
+- `/tmp/autovolume-usb.log`: USB volume udev events
+- `/tmp/autosink.log`: combined sink creation
 
 ## Development
 
-Shared logic lives in `lib/audio-utils.sh`; the five CLIs source it (repo checkout or installed copy). CI enforces both of these:
+Shared logic lives in `lib/audio-utils.sh`, and the five CLIs source it, whether run from a repository checkout or from the installed copy. CI enforces both of these:
 
 ```bash
 # lint (errors only)
